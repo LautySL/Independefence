@@ -7,6 +7,11 @@ class SoundManager:
         self.musica_menu_sonando = False
         self.musica_combate_sonando = False
         
+        # === BILLETERA DE VOLUMEN CENTRALIZADA (NUEVO) ===
+        # Ambos inicializados en el 40% que me pediste para arrancar simétricos
+        self.vol_musica = 0.4
+        self.vol_fx = 0.4
+        
         # Inicializamos en None para evitar cualquier tipo de AttributeError en la RAM
         self.snd_hover = None
         self.snd_caching = None
@@ -16,7 +21,7 @@ class SoundManager:
         self.snds_volver = []
         
         # 2. CARGA DE MÚSICA DE FONDO (.mp3 por Streaming)
-        pygame.mixer.music.set_volume(0.4) # Volumen inicial al 40%
+        pygame.mixer.music.set_volume(self.vol_musica) # Usa tu 40% inicial de forma segura
         self.ruta_musica_menu = "musica/War Plan - Devine-King [Ambient].mp3"
         self.ruta_musica_juego = "musica/March Of The Micmacs - Egan [International].mp3"
 
@@ -56,7 +61,7 @@ class SoundManager:
         # 5. CARGA AISLADA DE CLÍMAX DE VICTORIA
         try:
             self.snd_victoria = pygame.mixer.Sound("assets/sonidos/victoria.mp3")
-            self.snd_victoria.set_volume(0.7) # Volumen inicial al 70%
+            self.snd_victoria.set_volume(0.7) 
         except Exception as e:
             print(f"Aviso: No se pudo cargar assets/sonidos/victoria.mp3: {e}")
 
@@ -71,10 +76,37 @@ class SoundManager:
         self.snd_gear = None
         try:
             self.snd_gear = pygame.mixer.Sound("assets/sonidos/gear.mp3")
-            self.snd_gear.set_volume(0.5) # Volumen inicial independiente
+            self.snd_gear.set_volume(0.5) 
         except Exception as e:
             print(f"Aviso: No se pudo cargar assets/sonidos/gear.mp3: {e}")
 
+    # ========================================================
+    # CONTROLADORES DE VOLUMEN DINÁMICOS EN CALIENTE (NUEVO)
+    # ========================================================
+    def actualizar_volumen_musica(self, nuevo_volumen):
+        """Modifica el volumen del streaming de fondo en tiempo real (0.0 a 1.0)."""
+        self.vol_musica = max(0.0, min(1.0, nuevo_volumen))
+        pygame.mixer.music.set_volume(self.vol_musica)
+
+    def actualizar_volumen_fx(self, nuevo_volumen):
+        """Calibra el volumen de absolutamente todos los audios cortos en caliente."""
+        self.vol_fx = max(0.0, min(1.0, nuevo_volumen))
+        
+        # Le pisamos el volumen individual a cada efecto cargado si existen en la memoria
+        if self.snd_hover: self.snd_hover.set_volume(self.vol_fx)
+        if self.snd_caching: self.snd_caching.set_volume(self.vol_fx)
+        if self.snd_gear: self.snd_gear.set_volume(self.vol_fx)
+        if self.snd_victoria: self.snd_victoria.set_volume(self.vol_fx)
+        if self.snd_gameover: self.snd_gameover.set_volume(self.vol_fx)
+        
+        for snd in self.snds_siguiente:
+            if snd: snd.set_volume(self.vol_fx)
+        for snd in self.snds_volver:
+            if snd: snd.set_volume(self.vol_fx)
+
+    # ========================================================
+    # MÉTODOS DE REPRODUCCIÓN (TUS LÍNEAS NATIVAS ACTUALES)
+    # ========================================================
     def reproducir_musica_menu(self):
         """Enciende la banda sonora colonial en bucle si no estaba sonando ya."""
         if not self.musica_menu_sonando:
@@ -82,33 +114,29 @@ class SoundManager:
                 pygame.mixer.music.load(self.ruta_musica_menu)
                 pygame.mixer.music.play(-1)
                 self.musica_menu_sonando = True
-                self.musica_combate_sonando = False # <-- OBLIGATORIO: Libera el candado de guerra al volver al inicio
+                self.musica_combate_sonando = False
             except:
                 pass
 
     def reproducir_musica_combate(self):
         """Activa la marcha militar de guerra en loop infinito en cualquier nivel activo."""
-        # El cerrojo: si la bandera ya es True, la función rebota y deja correr el tema libremente
         if not self.musica_combate_sonando:
             try:
-                # Forzamos el encendido de la bandera en el microsegundo uno ANTES de la carga
-                # Esto blinda el motor para que no haya duplicaciones por frames lentos
                 self.musica_combate_sonando = True
                 self.musica_menu_sonando = False
-                
                 print(f"[ SoundManager ] ¡A las armas! Sonando en loop: {self.ruta_musica_juego}")
                 pygame.mixer.music.load(self.ruta_musica_juego)
-                pygame.mixer.music.play(-1) # Loop infinito de combate
+                pygame.mixer.music.set_volume(self.vol_musica) # Asegura escuchar tu barra de volumen
+                pygame.mixer.music.play(-1, 0.0)
             except Exception as e:
                 print(f"Error crítico al cargar la marcha de combate: {e}")
-                # Si falló la carga física del disco, liberamos el cerrojo por seguridad
-                self.musica_combate_sonando = False 
+                self.musica_combate_sonando = False
 
     def detener_musica(self):
         """Apaga el streaming de audio por completo de la memoria RAM."""
         pygame.mixer.music.stop()
         self.musica_menu_sonando = False
-        self.musica_combate_sonando = False # <-- OBLIGATORIO: Apaga ambos hilos en seco
+        self.musica_combate_sonando = False
 
     def play_hover(self):
         """Gatilla el pitido corto al pasar el cursor por los botones."""

@@ -118,6 +118,9 @@ def main():
     ultimo_sonido_hover = 0 # Inicializado en 0 como número común y corriente
     tiempo_gear_hundido = 0 
 
+    arrastrando_musica = False
+    arrastrando_fx = False
+
     correr = True
 
     while correr:
@@ -141,39 +144,55 @@ def main():
             elif estado_actual == cte.ESTADO_MENU:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     
-                    # Clic en COMENZAR / JUGAR
+                    # === 1. CLIC EN COMENZAR / JUGAR ===
                     if r_jugar.collidepoint(pos_mouse):
                         administrador_sonidos.play_siguiente()
                         administrador_menus.dibujar_menu_principal(pantalla, fuente_titulos, pos_mouse, btn_com, btn_glo, btn_cre, btn_sal, True, tiempo_actual)
+                        
+                        # PARCHE VISUAL: Estampamos el engranaje en este frame exacto para que no desaparezca durante el delay
+                        pantalla.blit(administrador_menus.img_gear_nativa, administrador_menus.img_gear_nativa.get_rect(center=rect_gear.center))
+                        
                         pygame.display.flip()
                         pygame.time.delay(180)
                         estado_actual = cte.ESTADO_JUGAR_SELECCION
                         
-                    # Clic en GLOSARIO
+                    # === 2. CLIC EN GLOSARIO ===
                     elif r_glosario.collidepoint(pos_mouse):
                         administrador_sonidos.play_siguiente()
                         administrador_menus.dibujar_menu_principal(pantalla, fuente_titulos, pos_mouse, btn_com, btn_glo, btn_cre, btn_sal, True, tiempo_actual)
+                        
+                        # PARCHE VISUAL: Estampamos el engranaje antes de congelar la pantalla
+                        pantalla.blit(administrador_menus.img_gear_nativa, administrador_menus.img_gear_nativa.get_rect(center=rect_gear.center))
+                        
                         pygame.display.flip()
                         pygame.time.delay(180)
                         estado_actual = cte.ESTADO_GLOSARIO
                         
-                    # Clic en CRÉDITOS
+                    # === 3. CLIC EN CRÉDITOS ===
                     elif r_creditos.collidepoint(pos_mouse):
                         administrador_sonidos.play_siguiente()
                         administrador_menus.dibujar_menu_principal(pantalla, fuente_titulos, pos_mouse, btn_com, btn_glo, btn_cre, btn_sal, True, tiempo_actual)
+                        
+                        # PARCHE VISUAL: Estampamos el engranaje antes de congelar la pantalla
+                        pantalla.blit(administrador_menus.img_gear_nativa, administrador_menus.img_gear_nativa.get_rect(center=rect_gear.center))
+                        
                         pygame.display.flip()
                         pygame.time.delay(180)
                         estado_actual = cte.ESTADO_CREDITOS
                         
-                    # Clic en SALIR
+                    # === 4. CLIC EN SALIR ===
                     elif r_salir.collidepoint(pos_mouse):
                         administrador_menus.dibujar_menu_principal(pantalla, fuente_titulos, pos_mouse, btn_com, btn_glo, btn_cre, btn_sal, True, tiempo_actual)
+                        
+                        # PARCHE VISUAL: Estampamos el engranaje antes de congelar la pantalla
+                        pantalla.blit(administrador_menus.img_gear_nativa, administrador_menus.img_gear_nativa.get_rect(center=rect_gear.center))
+                        
                         pygame.display.flip()
                         pygame.time.delay(150)
                         correr = False
 
-                    # Clic en Opciones
-                    elif rect_gear.collidepoint(pos_mouse): # Dejamos un pass acá. Toda la física y la transición se resuelven abajo en tiempo real sin congelar los frames del renderizado.
+                    # === 5. CLIC EN EL ENGRANAJE DE CONFIGURACIÓN ===
+                    elif rect_gear.collidepoint(pos_mouse):
                         pass
 
             # Sacamos el bloque afuera transformándolo en un 'elif' independiente al mismo nivel que ESTADO_MENU y evaluamos que ocurra el evento de click (MOUSEBUTTONDOWN) para poder leer 'event.pos' de forma segura.
@@ -391,9 +410,13 @@ def main():
                     
                     # Sincronizado milimétricamente con el sensor del texto de Y = 735 (Rango 710 a 760)
                     if (300 <= pos_mouse[0] <= 720) and (710 <= pos_mouse[1] <= 760):
+                        # El mánager reproduce el FX de retroceso aleatorio de tu ticketera
                         administrador_sonidos.play_volver()
-                        pygame.time.delay(180)
-                        estado_actual = cte.ESTADO_MENU # Regresamos a salvo al inicio
+                        
+                        pygame.time.delay(180) # Colchón reglamentario para dejar sonar el mp3
+                        
+                        # Cambia el estado de regreso a salvo al menú principal
+                        estado_actual = cte.ESTADO_MENU
 
         # --- LOGICA Y RENDERIZADO POR FUNCIÓN ---
         if estado_actual == cte.ESTADO_BIENVENIDA:
@@ -517,10 +540,41 @@ def main():
             r_volver = administrador_menus.dibujar_pantallas_estaticas(pantalla, estado_actual, fuente_titulos, fuente_botones, pos_mouse)
 
         elif estado_actual == cte.ESTADO_OPCIONES:
-            # El manager estampa "opciones.png" y nos devuelve el rectángulo de retorno del piso
-            r_v_opciones = administrador_menus.dibujar_pantalla_opciones(pantalla, fuente_titulos, fuente_botones, pos_mouse)
-            # Mantenemos la orquesta sonando estable de fondo
-            administrador_sonidos.reproducir_musica_menu()
+            click_lista = pygame.mouse.get_pressed()
+            click_izquierdo_sostenido = click_lista[0]
+            
+            # 1. RENDERIZADO VISUAL EN PANTALLA
+            r_v_opciones = administrador_menus.dibujar_pantalla_opciones(
+                pantalla, fuente_titulos, fuente_botones, pos_mouse, administrador_sonidos
+            )
+            
+            barra_x = 280
+            barra_largo = 500
+            
+            # 2. PROCESADOR DE FOCO Y SEGURIDAD CONTRA ARRASTRES FANTASMAS
+            if click_izquierdo_sostenido:
+                # Si el usuario hace clic inicial adentro de la zona de música, capturamos el foco de esa barra
+                if administrador_menus.rect_zona_musica.collidepoint(pos_mouse) and not arrastrando_fx:
+                    arrastrando_musica = True
+                # Si hace clic inicial adentro de la zona de efectos, capturamos su foco exclusivo
+                elif administrador_menus.rect_zona_fx.collidepoint(pos_mouse) and not arrastrando_musica:
+                    arrastrando_fx = True
+            else:
+                # En cuanto el usuario levanta físicamente el dedo del mouse, liberamos los candados en el acto
+                arrastrando_musica = False
+                arrastrando_fx = False
+
+            # 3. EJECUCIÓN HORIZONTAL CONTINUA (IGNORA EL DESVÍO VERTICAL DEL CURSOR)
+            if arrastrando_musica:
+                # Calculamos el porcentaje basándonos únicamente en la posición X actual del cursor
+                pixeles_locales = pos_mouse[0] - barra_x
+                porcentaje_nuevo = max(0.0, min(1.0, pixeles_locales / barra_largo))
+                administrador_sonidos.actualizar_volumen_musica(porcentaje_nuevo)
+                
+            elif arrastrando_fx:
+                pixeles_locales = pos_mouse[0] - barra_x
+                porcentaje_nuevo = max(0.0, min(1.0, pixeles_locales / barra_largo))
+                administrador_sonidos.actualizar_volumen_fx(porcentaje_nuevo)
             
         elif estado_actual == cte.ESTADO_JUEGO_ACTIVO:
             # 1. CENTRALIZADOR DE DERROTA INDUSTRIAL (Evita pisadas de variables y limpia el buffer)

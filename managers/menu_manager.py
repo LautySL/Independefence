@@ -41,6 +41,23 @@ class MenuManager:
             
             # Cargamos el icono nativo del engranaje mecánico
             self.img_gear_nativa = pygame.image.load("assets/gear.png").convert_alpha()
+
+            # Iconoes de opciones
+            self.ico_musica_on = pygame.image.load("assets/interfaces/musica_on.png").convert_alpha()
+            self.ico_musica_off = pygame.image.load("assets/interfaces/musica_off.png").convert_alpha()
+            
+            self.ico_fx_max = pygame.image.load("assets/interfaces/vol_maximo.png").convert_alpha()
+            self.ico_fx_med = pygame.image.load("assets/interfaces/vol_medio.png").convert_alpha()
+            self.ico_fx_baj = pygame.image.load("assets/interfaces/vol_bajo.png").convert_alpha()
+            self.ico_fx_off = pygame.image.load("assets/interfaces/vol_off.png").convert_alpha()
+            
+            # Escalamos todos los iconos de forma uniforme a 40x40 píxeles para que queden perfectos
+            self.ico_musica_on = pygame.transform.scale(self.ico_musica_on, (40, 40))
+            self.ico_musica_off = pygame.transform.scale(self.ico_musica_off, (40, 40))
+            self.ico_fx_max = pygame.transform.scale(self.ico_fx_max, (40, 40))
+            self.ico_fx_med = pygame.transform.scale(self.ico_fx_med, (40, 40))
+            self.ico_fx_baj = pygame.transform.scale(self.ico_fx_baj, (40, 40))
+            self.ico_fx_off = pygame.transform.scale(self.ico_fx_off, (40, 40))
             
         except Exception as e:
             print(f"Error al cargar recursos estéticos en el MenuManager: {e}")
@@ -442,8 +459,9 @@ class MenuManager:
             aux = pygame.Surface((342, 66))
             return [aux, aux, aux]
 
-    def dibujar_pantalla_opciones(self, pantalla, f_tit, f_bot, pos_mouse):
-        """Dibuja la carátula vacía de opciones lista para el diagrama de volumen."""
+    def dibujar_pantalla_opciones(self, pantalla, f_tit, f_bot, pos_mouse, sound_manager):
+        """Dibuja de forma interactiva las barras, textos y óvalos mutantes según el diagrama."""
+        # 1. Estampamos el fondo "opciones.png"
         if self.fondo_opciones:
             pantalla.blit(self.fondo_opciones, (0, 0))
         else:
@@ -451,7 +469,75 @@ class MenuManager:
             
         self.blit_con_contorno(pantalla, "OPCIONES DE CONFIGURACION", f_tit, (255, 215, 0), (512, 60), es_centro=True)
         
-        # --- EL RECUADRO DE RETORNO AL MENÚ PRINCIPAL ---
-        # Posicionado milimétricamente en el centro inferior (Eje Y = 735) igual que el Glosario
-        r_volver_opciones = self.crear_boton_pixel(pantalla, "[ VOLVER AL MILITAR (MENU) ]", 512, 735, f_bot, pos_mouse)
+        # Color blanco puro con contorno negro nativo para los indicadores
+        color_fuente = (255, 255, 255)
+        
+        # Dimensiones estándar para las barras negras (Arrancan en X=280 y miden 500px de largo en total)
+        barra_x = 280
+        barra_largo = 500
+        
+        # ========================================================
+        # SECCIÓN A: CONTROL DE VOLUMEN DE MÚSICA
+        # ========================================================
+        self.blit_con_contorno(pantalla, "MUSICA", f_bot, color_fuente, (170, 200), es_centro=False)
+        
+        # Altura física de la barra de música
+        barra_y_musica = 260
+        
+        # Dibujamos la barrita negra horizontal de base (Grosor de 4 píxeles)
+        pygame.draw.line(pantalla, (0, 0, 0), (barra_x, barra_y_musica), (barra_x + barra_largo, barra_y_musica), 4)
+        
+        # Calculamos primero el número entero indicador a la derecha (Mapeado de 0 a 100)
+        num_musica = int(sound_manager.vol_musica * 100)
+        
+        # Evaluamos el número entero limpio. Si da 0, pasa a OFF de forma infalible
+        img_musica_activa = self.ico_musica_off if num_musica == 0 else self.ico_musica_on
+        pantalla.blit(img_musica_activa, (170, 240))
+        
+        # Calculamos la posición del Óvalo en X según el porcentaje actual
+        ovalo_x_musica = barra_x + int(sound_manager.vol_musica * barra_largo)
+        # Dibujamos el óvalo vertical nativo de Pygame usando un Rect (Ancho: 14px, Alto: 24px)
+        rect_ovalo_musica = pygame.Rect(ovalo_x_musica - 7, barra_y_musica - 12, 14, 24)
+        pygame.draw.ellipse(pantalla, (0, 0, 0), rect_ovalo_musica)
+        
+        # Estampamos el indicador numérico blanco
+        self.blit_con_contorno(pantalla, f"{num_musica}", f_bot, color_fuente, (barra_x + barra_largo + 30, barra_y_musica), es_centro=True)
+
+        # ========================================================
+        # SECCIÓN B: CONTROL DE VOLUMEN DE EFECTOS FX
+        # ========================================================
+        self.blit_con_contorno(pantalla, "EFECTOS DE SONIDO", f_bot, color_fuente, (170, 420), es_centro=False)
+        
+        # Altura física de la barra de efectos FX (¡DEFINIDA ANTES DE USARSE CON ÉXITO!)
+        barra_y_fx = 480
+        
+        # Dibujamos la segunda barrita negra horizontal
+        pygame.draw.line(pantalla, (0, 0, 0), (barra_x, barra_y_fx), (barra_x + barra_largo, barra_y_fx), 4)
+        
+        # Calculamos primero su número entero mapeado de 0 a 100
+        num_fx = int(sound_manager.vol_fx * 100)
+        
+        # Evaluamos los tramos usando el número entero para que calce exacto con la pantalla
+        v_fx = sound_manager.vol_fx
+        if num_fx == 0: img_fx_activa = self.ico_fx_off
+        elif v_fx <= 0.33: img_fx_activa = self.ico_fx_baj
+        elif v_fx <= 0.66: img_fx_activa = self.ico_fx_med
+        else: img_fx_activa = self.ico_fx_max
+        pantalla.blit(img_fx_activa, (170, 460))
+        
+        # Se calcula la posicion del ovalo en X para tus efectos
+        ovalo_x_fx = barra_x + int(sound_manager.vol_fx * barra_largo)
+        rect_ovalo_fx = pygame.Rect(ovalo_x_fx - 7, barra_y_fx - 12, 14, 24)
+        pygame.draw.ellipse(pantalla, (0, 0, 0), rect_ovalo_fx)
+        
+        # Estampamos el indicador numérico blanco
+        self.blit_con_contorno(pantalla, f"{num_fx}", f_bot, color_fuente, (barra_x + barra_largo + 30, barra_y_fx), es_centro=True)
+
+        # === CAJAS VIRTUALES DE ARRASTRE CONTINUO ===
+        # Expandimos la zona del click a 35 píxeles para que sea cómodo arrastrar
+        self.rect_zona_musica = pygame.Rect(barra_x, barra_y_musica - 17, barra_largo, 35)
+        self.rect_zona_fx = pygame.Rect(barra_x, barra_y_fx - 17, barra_largo, 35)
+
+        # El texto indicador inferior para salir de las Opciones (Eje Y = 735)
+        r_volver_opciones = self.crear_boton_pixel(pantalla, "VOLVER AL MILITAR (MENU)", 512, 735, f_bot, pos_mouse)
         return r_volver_opciones
