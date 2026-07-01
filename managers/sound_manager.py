@@ -3,13 +3,15 @@ import random
 
 class SoundManager:
     def __init__(self):
-        # 1. BANDERAS DE CONTROL INTERNO
+        # 1. BANDERAS DE CONTROL INTERNO (Añadido control de combate)
         self.musica_menu_sonando = False
+        self.musica_combate_sonando = False
         
         # 2. CARGA DE MÚSICA DE FONDO (.mp3 por Streaming)
         pygame.mixer.music.set_volume(0.4) # Volumen inicial al 40%
         self.ruta_musica_menu = "musica/War Plan - Devine-King [Ambient].mp3"
-        
+        self.ruta_musica_juego = "musica/March Of The Micmacs - Egan [International].mp3"
+
         try:
             pygame.mixer.music.load(self.ruta_musica_menu)
         except Exception as e:
@@ -44,16 +46,35 @@ class SoundManager:
         if not self.musica_menu_sonando:
             try:
                 pygame.mixer.music.load(self.ruta_musica_menu)
-                pygame.mixer.music.play(-1) # -1 activa el bucle infinito
+                pygame.mixer.music.play(-1)
                 self.musica_menu_sonando = True
+                self.musica_combate_sonando = False # <-- OBLIGATORIO: Libera el candado de guerra al volver al inicio
             except:
                 pass
 
+    def reproducir_musica_combate(self):
+        """Activa la marcha militar de guerra en loop infinito en cualquier nivel activo."""
+        # El cerrojo: si la bandera ya es True, la función rebota y deja correr el tema libremente
+        if not self.musica_combate_sonando:
+            try:
+                # Forzamos el encendido de la bandera en el microsegundo uno ANTES de la carga
+                # Esto blinda el motor para que no haya duplicaciones por frames lentos
+                self.musica_combate_sonando = True
+                self.musica_menu_sonando = False
+                
+                print(f"[ SoundManager ] ¡A las armas! Sonando en loop: {self.ruta_musica_juego}")
+                pygame.mixer.music.load(self.ruta_musica_juego)
+                pygame.mixer.music.play(-1) # Loop infinito de combate
+            except Exception as e:
+                print(f"Error crítico al cargar la marcha de combate: {e}")
+                # Si falló la carga física del disco, liberamos el cerrojo por seguridad
+                self.musica_combate_sonando = False 
+
     def detener_musica(self):
-        """Apaga el streaming de audio al instante para entrar al combate."""
-        if self.musica_menu_sonando:
-            pygame.mixer.music.stop()
-            self.musica_menu_sonando = False
+        """Apaga el streaming de audio por completo de la memoria RAM."""
+        pygame.mixer.music.stop()
+        self.musica_menu_sonando = False
+        self.musica_combate_sonando = False # <-- OBLIGATORIO: Apaga ambos hilos en seco
 
     def play_hover(self):
         """Gatilla el pitido corto al pasar el cursor por los botones."""
