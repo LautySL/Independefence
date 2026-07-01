@@ -3,9 +3,17 @@ import random
 
 class SoundManager:
     def __init__(self):
-        # 1. BANDERAS DE CONTROL INTERNO (Añadido control de combate)
+        # 1. BANDERAS DE CONTROL INTERNO
         self.musica_menu_sonando = False
         self.musica_combate_sonando = False
+        
+        # Inicializamos en None para evitar cualquier tipo de AttributeError en la RAM
+        self.snd_hover = None
+        self.snd_caching = None
+        self.snd_victoria = None
+        self.snd_gameover = None
+        self.snds_siguiente = []
+        self.snds_volver = []
         
         # 2. CARGA DE MÚSICA DE FONDO (.mp3 por Streaming)
         pygame.mixer.music.set_volume(0.4) # Volumen inicial al 40%
@@ -17,16 +25,12 @@ class SoundManager:
         except Exception as e:
             print(f"Aviso de música: No se pudo cargar {self.ruta_musica_menu}: {e}")
 
-        # 3. CARGA DE EFECTOS DE SONIDO FX (Formatos cortos en memoria)
+        # 3. CARGA DE EFECTOS BASE DEL MENÚ (Aislado de fallas externas)
         try:
             self.snd_hover = pygame.mixer.Sound("assets/sonidos/point.mp3")
             self.snd_hover.set_volume(0.5)
             
-            # --- NUEVA INYECCIÓN: EFECTO DE COMPRA PATRIA ---
-            # Asegurate de que el archivo ca-ching real esté en esta ruta con su nombre exacto
-            self.snd_caching = pygame.mixer.Sound("assets/sonidos/ca-ching.mp3") # o .wav
-            self.snd_caching.set_volume(0.6) # Volumen inicial independiente para los efectos FX
-            
+            # Pack aleatorio de sonidos para avanzar
             self.snds_siguiente = [
                 pygame.mixer.Sound("assets/sonidos/siguiente1.mp3"),
                 pygame.mixer.Sound("assets/sonidos/siguiente2.mp3"),
@@ -40,10 +44,28 @@ class SoundManager:
                 pygame.mixer.Sound("assets/sonidos/volver3.mp3")
             ]
         except Exception as e:
-            print(f"Error al cargar efectos FX de sonido: {e}")
-            self.snd_hover = None
-            self.snds_siguiente = []
-            self.snds_volver = []
+            print(f"Error al cargar efectos FX base del menú: {e}")
+
+        # 4. CARGA AISLADA DEL EFECTO DE COMPRA "CA-CHING"
+        try:
+            self.snd_caching = pygame.mixer.Sound("assets/sonidos/ca-ching.mp3")
+            self.snd_caching.set_volume(0.6)
+        except Exception as e:
+            print(f"Aviso: No se encontró el archivo ca-ching.mp3: {e}")
+
+        # 5. CARGA AISLADA DE CLÍMAX DE VICTORIA
+        try:
+            self.snd_victoria = pygame.mixer.Sound("assets/sonidos/victoria.mp3")
+            self.snd_victoria.set_volume(0.7) # Volumen inicial al 70%
+        except Exception as e:
+            print(f"Aviso: No se pudo cargar assets/sonidos/victoria.mp3: {e}")
+
+        # 6. CARGA AISLADA DE CLÍMAX DE DERROTA
+        try:
+            self.snd_gameover = pygame.mixer.Sound("assets/sonidos/gameover.mp3")
+            self.snd_gameover.set_volume(0.7)
+        except Exception as e:
+            print(f"Aviso: No se pudo cargar assets/sonidos/gameover.mp3: {e}")
 
     def reproducir_musica_menu(self):
         """Enciende la banda sonora colonial en bucle si no estaba sonando ya."""
@@ -99,3 +121,13 @@ class SoundManager:
         """Gatilla el sonido monetario al desplegar tropas patrias en la grilla."""
         if self.snd_caching:
             self.snd_caching.play()
+
+    def play_victoria(self):
+        """Gatilla la orquesta triunfal al defender el Cabildo de forma exitosa."""
+        if self.snd_victoria:
+            self.snd_victoria.play()
+
+    def play_gameover(self):
+        """Dispara la melodía de derrota cuando las hordas españolas quiebran tu base."""
+        if self.snd_gameover:
+            self.snd_gameover.play()

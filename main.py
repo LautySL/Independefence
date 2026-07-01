@@ -467,12 +467,17 @@ def main():
         elif estado_actual == cte.ESTADO_JUEGO_ACTIVO:
             # 1. CENTRALIZADOR DE DERROTA INDUSTRIAL (Evita pisadas de variables y limpia el buffer)
             if cabildo.vidas <= 0:
+                # Apagamos March Of The Micmacs de la memoria RAM
                 administrador_sonidos.detener_musica() 
+
+                # GATILLAMOS TU EFECTO DE DERROTA (NUEVO)
+                administrador_sonidos.play_gameover()
+
                 print("\n========================================================")
                 print(" ¡EL CABILDO HA CAÍDO! Las hordas realistas tomaron la plaza.")
                 print("========================================================\n")
                 estado_actual = cte.ESTADO_GAME_OVER
-                continue 
+                continue  
 
             # === CORRECCIÓN DEFINITIVA CONTRA EL SILENCIO ===
             # ¡BORRAMOS COMPLETAMENTE LA LÍNEA DE 'administrador_sonidos.detener_musica()' DE ACÁ!
@@ -521,6 +526,7 @@ def main():
             # 6. DETECTOR DE VICTORIA REVOLUCIONARIA DEFINITIVA
             if administrador_oleadas.oleada_actual > 3:
                 administrador_sonidos.detener_musica() 
+                administrador_sonidos.play_victoria()
                 estado_actual = cte.ESTADO_FINAL_MISION
 
             # ========================================================
