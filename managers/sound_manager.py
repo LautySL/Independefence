@@ -67,6 +67,14 @@ class SoundManager:
         except Exception as e:
             print(f"Aviso: No se pudo cargar assets/sonidos/gameover.mp3: {e}")
 
+        # 7. CARGA AISLADA DEL EFECTO DEL ENGRANAJE
+        self.snd_gear = None
+        try:
+            self.snd_gear = pygame.mixer.Sound("assets/sonidos/gear.mp3")
+            self.snd_gear.set_volume(0.5) # Volumen inicial independiente
+        except Exception as e:
+            print(f"Aviso: No se pudo cargar assets/sonidos/gear.mp3: {e}")
+
     def reproducir_musica_menu(self):
         """Enciende la banda sonora colonial en bucle si no estaba sonando ya."""
         if not self.musica_menu_sonando:
@@ -131,3 +139,8 @@ class SoundManager:
         """Dispara la melodía de derrota cuando las hordas españolas quiebran tu base."""
         if self.snd_gameover:
             self.snd_gameover.play()
+
+    def play_gear(self):
+        """Gatilla el sonido mecánico al presionar el engranaje de opciones."""
+        if self.snd_gear:
+            self.snd_gear.play()

@@ -116,6 +116,7 @@ def main():
     # Buscá estas líneas arriba de tu while correr en el main():
     control_hover = {"activo": -1}
     ultimo_sonido_hover = 0 # Inicializado en 0 como número común y corriente
+    tiempo_gear_hundido = 0 
 
     correr = True
 
@@ -170,6 +171,10 @@ def main():
                         pygame.display.flip()
                         pygame.time.delay(150)
                         correr = False
+
+                    # Clic en Opciones
+                    elif rect_gear.collidepoint(pos_mouse): # Dejamos un pass acá. Toda la física y la transición se resuelven abajo en tiempo real sin congelar los frames del renderizado.
+                        pass
 
             # Sacamos el bloque afuera transformándolo en un 'elif' independiente al mismo nivel que ESTADO_MENU y evaluamos que ocurra el evento de click (MOUSEBUTTONDOWN) para poder leer 'event.pos' de forma segura.
             elif estado_actual == cte.ESTADO_GLOSARIO or estado_actual == cte.ESTADO_CREDITOS:
@@ -381,6 +386,14 @@ def main():
                         
                         estado_actual = cte.ESTADO_MENU
 
+            elif estado_actual == cte.ESTADO_OPCIONES:
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    
+                    # Sincronizado milimétricamente con el sensor del texto de Y = 735 (Rango 710 a 760)
+                    if (300 <= pos_mouse[0] <= 720) and (710 <= pos_mouse[1] <= 760):
+                        administrador_sonidos.play_volver()
+                        pygame.time.delay(180)
+                        estado_actual = cte.ESTADO_MENU # Regresamos a salvo al inicio
 
         # --- LOGICA Y RENDERIZADO POR FUNCIÓN ---
         if estado_actual == cte.ESTADO_BIENVENIDA:
@@ -388,7 +401,7 @@ def main():
             
         elif estado_actual == cte.ESTADO_MENU:
             click_lista = pygame.mouse.get_pressed()
-            click_izquierdo_activo = click_lista
+            click_izquierdo_activo = click_lista[0]
             
             # RECORTE DE LLAMADO: Pasamos el llamado limpio terminando en tiempo_actual
             r_jugar, r_glosario, r_creditos, r_salir = administrador_menus.dibujar_menu_principal(
@@ -396,28 +409,67 @@ def main():
                 click_izquierdo_activo, tiempo_actual
             )
             
-            # 2. CONTROL GLOBAL DE AUDIO ANTI-SPAM (NUEVO)
-            # Evaluamos qué botón específico tiene el mouse encima en este frame exacto
+            # 2. CONTROL GLOBAL DE AUDIO ANTI-SPAM
             id_boton_actual = -1
             if r_jugar.collidepoint(pos_mouse): id_boton_actual = 0
             elif r_glosario.collidepoint(pos_mouse): id_boton_actual = 1
             elif r_creditos.collidepoint(pos_mouse): id_boton_actual = 2
             elif r_salir.collidepoint(pos_mouse): id_boton_actual = 3
             
-            # Si el mouse entró a un botón válido en tu menú principal
             if id_boton_actual != -1:
                 if control_hover["activo"] != id_boton_actual:
-                    # Validamos el colchón de 200 milisegundos para extinguir la ametralladora
                     if tiempo_actual - ultimo_sonido_hover > 200:
-                        
-                        # CORRECCIÓN INDUSTRIAL: El mánager ejecuta el point.mp3 de forma segura
                         administrador_sonidos.play_hover()
-                        
-                        ultimo_sonido_hover = tiempo_actual # Registramos el tiempo del pitido global
+                        ultimo_sonido_hover = tiempo_actual 
                     control_hover["activo"] = id_boton_actual
             else:
-                # Si el mouse está en el fondo del pergamino fuera de los botones, liberamos el foco
                 control_hover["activo"] = -1
+
+            # ========================================================
+            # INYECCIÓN EXTRA: MOTOR INTERACTIVO DEL ENGRANAJE (REPARADO Y FIJADO)
+            # ========================================================
+            tam_base = 69
+            rect_gear = pygame.Rect(930, 670, tam_base, tam_base)
+            img_gear_render = administrador_menus.img_gear_nativa
+            
+            # Inicializamos una variable de disparo arriba de tu while correr si preferís, o acá mismo:
+            if 'solto_clic_gear' not in locals():
+                solto_clic_gear = False
+
+            if rect_gear.collidepoint(pos_mouse):
+                if click_izquierdo_activo:
+                    # ESTADO PRESIONADO: Se achica un 15% (Se hunde visiblemente mientras mantengas el dedo apoyado)
+                    tam_click = int(tam_base * 0.85)
+                    img_gear_render = pygame.transform.scale(img_gear_render, (tam_click, tam_click))
+                    solto_clic_gear = True # Activamos el gatillo de que el botón fue hundido
+                else:
+                    # TRANSICIÓN CINEMÁTICA AL SOLTAR EL CLIC:
+                    # Si el botón estuvo hundido y recién ahora levantaste el dedo del mouse
+                    if solto_clic_gear:
+                        solto_clic_gear = False # Reseteamos el gatillo
+                        administrador_sonidos.play_gear() # Suena tu mp3 mecánico
+                        pygame.time.delay(80) # Breve colchón que ahora sí es legal para escuchar el click
+                        estado_actual = cte.ESTADO_OPCIONES # Viajamos al panel de volumen
+                    else:
+                        tam_hover = int(tam_base * 1.06)
+                        img_gear_render = pygame.transform.scale(img_gear_render, (tam_hover, tam_hover))
+                        
+                        # === RESPLANDOR GRISÁCEO TENUE NATIVO ===
+                        copia_brillo = img_gear_render.copy()
+                        mascara_gear = pygame.mask.from_surface(copia_brillo)
+                        
+                        silueta_gris = pygame.Surface(copia_brillo.get_size(), pygame.SRCALPHA)
+                        mascara_gear.to_surface(surface=silueta_gris, setcolor=(200, 200, 200, 255), unsetcolor=(0, 0, 0, 0))
+                        
+                        silueta_gris.set_alpha(90) 
+                        copia_brillo.blit(silueta_gris, (0, 0))
+                        img_gear_render = copia_brillo
+            else:
+                # Si sacás el mouse de la zona, cancelamos el gatillo de cambio de pantalla por seguridad
+                solto_clic_gear = False
+
+            # Estampamos el engranaje perfectamente centrado en su caja invisible de colisión
+            pantalla.blit(img_gear_render, img_gear_render.get_rect(center=rect_gear.center))
 
         elif estado_actual == cte.ESTADO_JUGAR_SELECCION:
             click_lista = pygame.mouse.get_pressed()
@@ -463,6 +515,12 @@ def main():
             
         elif estado_actual == cte.ESTADO_CREDITOS:
             r_volver = administrador_menus.dibujar_pantallas_estaticas(pantalla, estado_actual, fuente_titulos, fuente_botones, pos_mouse)
+
+        elif estado_actual == cte.ESTADO_OPCIONES:
+            # El manager estampa "opciones.png" y nos devuelve el rectángulo de retorno del piso
+            r_v_opciones = administrador_menus.dibujar_pantalla_opciones(pantalla, fuente_titulos, fuente_botones, pos_mouse)
+            # Mantenemos la orquesta sonando estable de fondo
+            administrador_sonidos.reproducir_musica_menu()
             
         elif estado_actual == cte.ESTADO_JUEGO_ACTIVO:
             # 1. CENTRALIZADOR DE DERROTA INDUSTRIAL (Evita pisadas de variables y limpia el buffer)

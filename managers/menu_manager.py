@@ -34,6 +34,13 @@ class MenuManager:
             # Bienvenida
             img_bien = pygame.image.load("assets/interfaces/Pantalla_de_bienvenida.png").convert()
             self.fondo_bienvenida = pygame.transform.scale(img_bien, (cte.ANCHO_DE_PANTALLA, cte.ALTO_DE_PANTALLA))
+
+            # --- NUEVA INYECCIÓN: PANEL DE CONFIGURACIÓN ---
+            img_opc = pygame.image.load("assets/interfaces/opciones.png").convert()
+            self.fondo_opciones = pygame.transform.scale(img_opc, (cte.ANCHO_DE_PANTALLA, cte.ALTO_DE_PANTALLA))
+            
+            # Cargamos el icono nativo del engranaje mecánico
+            self.img_gear_nativa = pygame.image.load("assets/gear.png").convert_alpha()
             
         except Exception as e:
             print(f"Error al cargar recursos estéticos en el MenuManager: {e}")
@@ -434,3 +441,17 @@ class MenuManager:
             # Auxilio de emergencia: si falla, devuelve superficies vacías para que el juego no crashee
             aux = pygame.Surface((342, 66))
             return [aux, aux, aux]
+
+    def dibujar_pantalla_opciones(self, pantalla, f_tit, f_bot, pos_mouse):
+        """Dibuja la carátula vacía de opciones lista para el diagrama de volumen."""
+        if self.fondo_opciones:
+            pantalla.blit(self.fondo_opciones, (0, 0))
+        else:
+            pantalla.fill((40, 40, 40)) # Auxilio gris oscuro
+            
+        self.blit_con_contorno(pantalla, "OPCIONES DE CONFIGURACION", f_tit, (255, 215, 0), (512, 60), es_centro=True)
+        
+        # --- EL RECUADRO DE RETORNO AL MENÚ PRINCIPAL ---
+        # Posicionado milimétricamente en el centro inferior (Eje Y = 735) igual que el Glosario
+        r_volver_opciones = self.crear_boton_pixel(pantalla, "[ VOLVER AL MILITAR (MENU) ]", 512, 735, f_bot, pos_mouse)
+        return r_volver_opciones
