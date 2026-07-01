@@ -42,14 +42,21 @@ class Base(pygame.sprite.Sprite):
             self.activar_grito_de_la_patria(grupo_enemigos)
 
     def activar_grito_de_la_patria(self, grupo_enemigos):
-        """Limpia la pantalla de la mayoría de las tropas enemigas en situaciones límite."""
+        """Limpia la plaza de Mayo activando las animaciones de muerte nativas de los enemigos."""
         self.emergencia_disponible = False
         print("¡Habilidad de Emergencia Activada: El Grito de la Patria!")
         
-        # Elimina a todos los soldados rasos, experimentados y artilleros comunes presentes
+        # Recorremos la lista de invasores realistas activos
         for enemigo in list(grupo_enemigos):
             if enemigo.tipo in ["soldado_raso", "soldado_experimentado", "artillero"]:
-                enemigo.kill()
+                # === CORRECCIÓN DEFINITIVA CONTRA EL BORRADO EN SECO ===
+                # Sincronizamos con la variable real de tu update de enemigo: 'esta_muerto'
+                enemigo.vida = 0
+                enemigo.esta_muerto = True # <-- ¡Cambiamos 'esta_muriendo' por tu bandera real!
+                
+                # Reiniciamos su animador para que arranque prolijo desde el cuadro 1 de caida
+                enemigo.frame_actual = 0
+                enemigo.ultimo_refresco = pygame.time.get_ticks()
             else:
                 # A los jefes o generales les quita el 50% de su vida actual
                 enemigo.vida = int(enemigo.vida * 0.5)

@@ -9,6 +9,8 @@ from managers.wave_manager import WaveManager
 print("Cargando Managers...")
 from managers.UI_manager import UIManager
 from managers.menu_manager import MenuManager
+from managers.sound_manager import SoundManager
+from managers.level_manager import LevelManager
 print("¡Todos los archivos se cargaron con éxito!")
 
 # ========================================================
@@ -25,169 +27,37 @@ def main():
     pantalla = pygame.display.set_mode((cte.ANCHO_DE_PANTALLA, cte.ALTO_DE_PANTALLA))    
     pygame.display.set_caption("Independefence")
     reloj = pygame.time.Clock()
+    administrador_menus = MenuManager()
+    administrador_sonidos = SoundManager()
 
-    try:
-        # 1. Cargamos el nuevo logotipo oficial que reemplaza al texto
-        logo_juego = pygame.image.load("assets/Independefence.png").convert_alpha()
-        # Escalalo a un tamaño prolijo para tu menu (ej: 450x150 o lo que pida tu diseño)
-        logo_juego = pygame.transform.scale(logo_juego, (450, 150))
-        
-        # 2. Cargamos el fondo ilustrado animado
-        fondo_menu_crudo = pygame.image.load("assets/interfaces/menu_principal.png").convert()
-        # Lo estiramos un poquito mas de la resolucion nativa para tener margen de movimiento
-        fondo_menu_grande = pygame.transform.scale(fondo_menu_crudo, (1124, 868))
-    except Exception as e:
-        print(f"Error al cargar recursos esteticos del menu: {e}")
-        logo_juego = None
-        fondo_menu_grande = None
+    administrador_niveles = LevelManager()
+    nivel_activo = 1 # Cambiará de forma interactiva según el clic de la grilla
 
     # --- CONFIGURACIÓN DE LA MÚSICA DE FONDO ---
     pygame.mixer.music.set_volume(0.4) # Arranca a un volumen prudente del 40%
     
     # Ruta directa hacia tu carpeta en la raiz (fuera de assets)
-    ruta_musica_menu = "musica/War Plan - Devine-King [Ambient].mp3" # <-- CAMBIÁ ESTO por el nombre exacto de tu archivo
-    
-    try:
-        pygame.mixer.music.load(ruta_musica_menu)
-        # BORRAMOS la linea del play() de aca para que NO suene en la carga de la consola
-        musica_menu_sonando = False 
-    except Exception as e:
-        print(f"Aviso de música: No se pudo cargar: {e}")
-        musica_menu_sonando = False
-
-    try:
-        fondo_bienvenida = pygame.image.load("assets/interfaces/Pantalla_de_bienvenida.png").convert()
-        fondo_bienvenida = pygame.transform.scale(fondo_bienvenida, (cte.ANCHO_DE_PANTALLA, cte.ALTO_DE_PANTALLA))
-    except Exception as e:
-        print(f"Error al cargar la portada de bienvenida: {e}")
-        fondo_bienvenida = None
-    
-    try:
-        # Sonido para cuando el mouse pasa por encima
-        snd_hover = pygame.mixer.Sound("assets/sonidos/point.mp3")
-        
-        # Listas para reproduccion aleatoria (Random)
-        snds_siguiente = [
-            pygame.mixer.Sound("assets/sonidos/siguiente1.mp3"),
-            pygame.mixer.Sound("assets/sonidos/siguiente2.mp3"),
-            pygame.mixer.Sound("assets/sonidos/siguiente3.mp3")
-        ]
-        snds_volver = [
-            pygame.mixer.Sound("assets/sonidos/volver1.mp3"),
-            pygame.mixer.Sound("assets/sonidos/volver2.mp3"),
-            pygame.mixer.Sound("assets/sonidos/volver3.mp3")
-        ]
-    except Exception as e:
-        print(f"Aviso de audio: No se pudieron cargar los efectos (.mp3): {e}")
-        snd_hover = None
-        snds_siguiente = snds_volver = []
+    ruta_musica_menu = "musica/War Plan - Devine-King [Ambient].mp3" 
 
     # Variables de control para evitar que el sonido de hover suene en bucle infinito
     # Guarda que boton estaba tocando el mouse en el frame anterior
     boton_hover_anterior = -1 
 
-    try:
-        # Carga completa del boton COMENZAR
-        btn_com = [
-            pygame.image.load("assets/interfaces/btn_comenzar.png").convert_alpha(),
-            pygame.image.load("assets/interfaces/btn_comenzar_selected.png").convert_alpha(),
-            pygame.image.load("assets/interfaces/btn_comenzar_pressed.png").convert_alpha()
-        ]
-        # Carga completa del boton GLOSARIO
-        btn_glo = [
-            pygame.image.load("assets/interfaces/btn_glosario.png").convert_alpha(),
-            pygame.image.load("assets/interfaces/btn_glosario_selected.png").convert_alpha(),
-            pygame.image.load("assets/interfaces/btn_glosario_pressed.png").convert_alpha()
-        ]
-        # Carga completa del boton CREDITOS
-        btn_cre = [
-            pygame.image.load("assets/interfaces/btn_creditos.png").convert_alpha(),
-            pygame.image.load("assets/interfaces/btn_creditos_selected.png").convert_alpha(),
-            pygame.image.load("assets/interfaces/btn_creditos_pressed.png").convert_alpha()
-        ]
-        # Carga completa del boton SALIR
-        btn_sal = [
-            pygame.image.load("assets/interfaces/btn_salir.png").convert_alpha(),
-            pygame.image.load("assets/interfaces/btn_salir_selected.png").convert_alpha(),
-            pygame.image.load("assets/interfaces/btn_salir_pressed.png").convert_alpha()
-        ]
+    # --- CARGA AUTOMATIZADA DE BOTONERAS INTERACTIVAS (NUEVO) ---
+    # El manager se encarga de buscar los sufijos _selected y _pressed tras bambalinas
+    btn_com = administrador_menus.cargar_pack_boton("btn_comenzar")
+    btn_glo = administrador_menus.cargar_pack_boton("btn_glosario")
+    btn_cre = administrador_menus.cargar_pack_boton("btn_creditos")
+    btn_sal = administrador_menus.cargar_pack_boton("btn_salir")
 
-    except Exception as e:
-
-        print(f"Error al cargar imagenes individuales: {e}")
-        # Auxilio por si te falta renombrar algun archivo todavia
-        aux = pygame.Surface((342, 66))
-        btn_com = btn_glo = btn_cre = btn_sal = [aux, aux, aux]
-
-    try:
-        # Cargamos el fondo ilustrado para la enciclopedia de ejércitos
-        fondo_glosario = pygame.image.load("assets/interfaces/glosario.png").convert()
-        fondo_glosario = pygame.transform.scale(fondo_glosario, (cte.ANCHO_DE_PANTALLA, cte.ALTO_DE_PANTALLA))
-    except Exception as e:
-        print(f"Error al cargar el fondo del glosario: {e}")
-        fondo_glosario = None
-
-    try:
-        postales = {
-            "c1": [
-                pygame.image.load("assets/interfaces/cabildo.png").convert_alpha(),
-                pygame.image.load("assets/interfaces/cabildo_selected.png").convert_alpha(),
-                pygame.image.load("assets/interfaces/cabildo_pressed.png").convert_alpha()
-            ],
-            "c2": [
-                pygame.image.load("assets/interfaces/catedral.png").convert_alpha(),
-                pygame.image.load("assets/interfaces/catedral_selected.png").convert_alpha(),
-                pygame.image.load("assets/interfaces/catedral_pressed.png").convert_alpha()
-            ],
-            "c3": [
-                pygame.image.load("assets/interfaces/elfortin.png").convert_alpha(),
-                pygame.image.load("assets/interfaces/elfortin_selected.png").convert_alpha(),
-                pygame.image.load("assets/interfaces/elfortin_pressed.png").convert_alpha()
-            ],
-            "c4": [
-                pygame.image.load("assets/interfaces/larecova.png").convert_alpha(),
-                pygame.image.load("assets/interfaces/larecova_selected.png").convert_alpha(),
-                pygame.image.load("assets/interfaces/larecova_pressed.png").convert_alpha()
-            ],
-            "c5": [pygame.Surface((1,1)), pygame.Surface((1,1)), pygame.Surface((1,1))] # Reserva vacia N5
-        }
-
-    except Exception as e:
-        print(f"Aviso de carga de postales: {e}")
-        # Auxilio grafico vacio por si falta recortar alguna todavia
-        vacio = pygame.Surface((160, 120))
-        postales = {"c1":[vacio]*3, "c2":[vacio]*3, "c3":[vacio]*3, "c4":[vacio]*3, "c5":[vacio]*3}
-
-    try:
-        # Cargamos el fondo ilustrado de victoria definitiva
-        fondo_victoria = pygame.image.load("assets/interfaces/mision_cumplida.png").convert()
-        fondo_victoria = pygame.transform.scale(fondo_victoria, (cte.ANCHO_DE_PANTALLA, cte.ALTO_DE_PANTALLA))
-    except Exception as e:
-        print(f"Error al cargar la pantalla de victoria: {e}")
-        fondo_victoria = None
-
-    try:
-        # Cargamos el fondo ilustrado para la pantalla de mapas
-        fondo_seleccion = pygame.image.load("assets/interfaces/seleccion_de_nivel.png").convert()
-        fondo_seleccion = pygame.transform.scale(fondo_seleccion, (cte.ANCHO_DE_PANTALLA, cte.ALTO_DE_PANTALLA))
-    except Exception as e:
-        print(f"Error al cargar el fondo de seleccion: {e}")
-        fondo_seleccion = None
-
-    try:
-        mapa_cabildo = pygame.image.load("assets/mapas/nivel_cabildo.png").convert()
-        mapa_cabildo = pygame.transform.scale(mapa_cabildo, (cte.ANCHO_DE_PANTALLA, cte.ALTO_DE_PANTALLA))
-    except Exception as e:
-        print(f"Error al cargar el mapa del nivel 1: {e}")
-        mapa_cabildo = None
-
-    try:
-        # Cargamos el fondo ilustrado de derrota definitiva
-        fondo_game_over = pygame.image.load("assets/interfaces/game_over.png").convert()
-        fondo_game_over = pygame.transform.scale(fondo_game_over, (cte.ANCHO_DE_PANTALLA, cte.ALTO_DE_PANTALLA))
-    except Exception as e:
-        print(f"Error al cargar la pantalla de derrota: {e}")
-        fondo_game_over = None
+    # Usamos el constructor automático del mánager para armar los packs de 3 estados de un viaje
+    postales = {
+        "c1": administrador_menus.cargar_pack_boton("cabildo"),
+        "c2": administrador_menus.cargar_pack_boton("catedral"),
+        "c3": administrador_menus.cargar_pack_boton("elfortin"),
+        "c4": administrador_menus.cargar_pack_boton("larecova"),
+        "c5": [pygame.Surface((1,1)), pygame.Surface((1,1)), pygame.Surface((1,1))] # Reserva vacía N5
+    }
 
     fuente_titulos = pygame.font.Font("fuentes/Jersey10-Regular.ttf", 54)
     fuente_botones = pygame.font.Font("fuentes/Jersey10-Regular.ttf", 32)
@@ -243,7 +113,6 @@ def main():
     # Buscá estas líneas arriba de tu while correr en el main():
     control_hover = {"activo": -1}
     ultimo_sonido_hover = 0 # Inicializado en 0 como número común y corriente
-    administrador_menus = MenuManager()
 
     correr = True
 
@@ -256,85 +125,71 @@ def main():
             if event.type == pygame.QUIT:
                 correr = False
 
-            # Transición: De Bienvenida a Menú Principal (MÚSICA ENCIENDE ACÁ)
+            # 1. Transición: De Bienvenida a Menú Principal
             if estado_actual == cte.ESTADO_BIENVENIDA:
                 if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
-                    
-                    # CORRECCIÓN: Le agregamos la "a" para que diga 'musica_menu_sonando'
-                    if not musica_menu_sonando:
-                        try:
-                            pygame.mixer.music.play(-1) # Se activa en bucle infinito
-                            musica_menu_sonando = True
-                        except:
-                            pass
+                    administrador_sonidos.reproducir_musica_menu()
                     estado_actual = cte.ESTADO_MENU
+                    continue # ¡EL TRUCO! Corta este evento acá para vaciar el clic de la Bienvenida y que no se pase al menú
 
-            # --- CAPTURA DE EVENTOS DE CLICS EN EL MENÚ PRINCIPAL (CORREGIDO DE 14 A 13 ARGUMENTOS) ---
+            # 2. CAPTURA DE EVENTOS DE CLICS EN EL MENÚ PRINCIPAL (SEPARADO Y BLINDADO)
+            # Al usar un 'if' o un 'elif' limpio a la misma altura, el juego procesa tu dedo de una
             elif estado_actual == cte.ESTADO_MENU:
-                if not musica_menu_sonando:
-                    pygame.mixer.music.play(-1)
-                    musica_menu_sonando = True
-
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     
-                    # 1. CLIC EN COMENZAR / JUGAR
+                    # Clic en COMENZAR / JUGAR
                     if r_jugar.collidepoint(pos_mouse):
-                        if snds_siguiente: random.choice(snds_siguiente).play()
-                        # Llamado limpio de 11 argumentos sin arrastrar variables de reloj
-                        administrador_menus.dibujar_menu_principal(pantalla, fuente_titulos, pos_mouse, btn_com, btn_glo, btn_cre, btn_sal, True, fondo_menu_grande, logo_juego, tiempo_actual)
+                        administrador_sonidos.play_siguiente()
+                        administrador_menus.dibujar_menu_principal(pantalla, fuente_titulos, pos_mouse, btn_com, btn_glo, btn_cre, btn_sal, True, tiempo_actual)
                         pygame.display.flip()
                         pygame.time.delay(180)
                         estado_actual = cte.ESTADO_JUGAR_SELECCION
                         
-                    # 2. CLIC EN GLOSARIO 
+                    # Clic en GLOSARIO
                     elif r_glosario.collidepoint(pos_mouse):
-                        if snds_siguiente:
-                            random.choice(snds_siguiente).play()
-                        # CORRECCIÓN: Dejamos el llamado limpio terminando en tiempo_actual
-                        administrador_menus.dibujar_menu_principal(pantalla, fuente_titulos, pos_mouse, btn_com, btn_glo, btn_cre, btn_sal, True, fondo_menu_grande, logo_juego, tiempo_actual)
+                        administrador_sonidos.play_siguiente()
+                        administrador_menus.dibujar_menu_principal(pantalla, fuente_titulos, pos_mouse, btn_com, btn_glo, btn_cre, btn_sal, True, tiempo_actual)
                         pygame.display.flip()
                         pygame.time.delay(180)
                         estado_actual = cte.ESTADO_GLOSARIO
                         
-                    # 3. CLIC EN CRÉDITOS 
+                    # Clic en CRÉDITOS
                     elif r_creditos.collidepoint(pos_mouse):
-                        if snds_siguiente:
-                            random.choice(snds_siguiente).play()
-                        # CORRECCIÓN: Dejamos el llamado limpio terminando en tiempo_actual
-                        administrador_menus.dibujar_menu_principal(pantalla, fuente_titulos, pos_mouse, btn_com, btn_glo, btn_cre, btn_sal, True, fondo_menu_grande, logo_juego, tiempo_actual)
+                        administrador_sonidos.play_siguiente()
+                        administrador_menus.dibujar_menu_principal(pantalla, fuente_titulos, pos_mouse, btn_com, btn_glo, btn_cre, btn_sal, True, tiempo_actual)
                         pygame.display.flip()
                         pygame.time.delay(180)
                         estado_actual = cte.ESTADO_CREDITOS
                         
-                    # 4. CLIC EN SALIR 
+                    # Clic en SALIR
                     elif r_salir.collidepoint(pos_mouse):
-                        # CORRECCIÓN: Dejamos el llamado limpio terminando en tiempo_actual
-                        administrador_menus.dibujar_menu_principal(pantalla, fuente_titulos, pos_mouse, btn_com, btn_glo, btn_cre, btn_sal, True, fondo_menu_grande, logo_juego, tiempo_actual)
+                        administrador_menus.dibujar_menu_principal(pantalla, fuente_titulos, pos_mouse, btn_com, btn_glo, btn_cre, btn_sal, True, tiempo_actual)
                         pygame.display.flip()
                         pygame.time.delay(150)
                         correr = False
 
-            # === ¡CORRECCIÓN CRÍTICA AQUÍ! ===
-            # Sacamos el bloque afuera transformándolo en un 'elif' independiente al mismo nivel que ESTADO_MENU.
-            # Evaluamos que ocurra el evento de click (MOUSEBUTTONDOWN) para poder leer 'event.pos' de forma segura.
+            # Sacamos el bloque afuera transformándolo en un 'elif' independiente al mismo nivel que ESTADO_MENU y evaluamos que ocurra el evento de click (MOUSEBUTTONDOWN) para poder leer 'event.pos' de forma segura.
             elif estado_actual == cte.ESTADO_GLOSARIO or estado_actual == cte.ESTADO_CREDITOS:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     clic_x, clic_y = event.pos
                     
-                    # Rango masivo calibrado con tus dos capturas (Cubre perfectamente el texto amarillo pegado al piso)
-                    if (300 <= clic_x <= 720) and (650 <= clic_y <= 768):
-                        if snds_volver:
-                            random.choice(snds_volver).play()
+                    if (300 <= clic_x <= 720) and (710 <= clic_y <= 760):
+                        
+                        # El mánager ejecuta el FX aleatorio de retroceso
+                        administrador_sonidos.play_volver()
                             
-                        pygame.time.delay(180)
-                        estado_actual = cte.ESTADO_MENU
+                        pygame.time.delay(180) # Colchón obligatorio para dejar sonar el mp3
+                        
+                        # El mánager se asegura de que la música de fondo siga rodando estable
+                        administrador_sonidos.reproducir_musica_menu()
+                        
+                        # Cambia el estado a salvo al menú principal
+                        estado_actual = cte.ESTADO_MENU 
 
             # Clics de la Selección de Niveles
             elif estado_actual == cte.ESTADO_JUGAR_SELECCION:
 
-                if not musica_menu_sonando:
-                    pygame.mixer.music.play(-1)
-                    musica_menu_sonando = True
+                administrador_sonidos.reproducir_musica_menu()
 
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
 
@@ -396,18 +251,18 @@ def main():
                         estado_actual = cte.ESTADO_CREDITOS
                         
                     elif r_volver.collidepoint(pos_mouse):
-                        # 1. REPRODUCCIÓN ALEATORIA DE RETROCESO (Gatilla tu efecto FX corto .mp3)
-                        if snds_volver:
-                            random.choice(snds_volver).play()
+                        # 1. El mánager ejecuta el FX aleatorio de retroceso
+                        administrador_sonidos.play_volver()
                         
-                        # --- REMOVEMOS LAS LÍNEAS DE RECARGA MUSICAL DE ACÁ ---
-                        # Al quitarlas de este botón, la banda sonora "War Plan" no se va a rebobinar;
-                        # va a seguir sonando de largo de forma continua y fluida mientras regresas al inicio.
-
-                        # 2. Forzamos una pausa de microsegundos para dejar escuchar el FX seco de salida
-                        pygame.time.delay(180) 
+                        # 2. El mánager redibuja la interfaz limpia sin arrastrar variables conflictivas
+                        administrador_menus.dibujar_seleccion_niveles(
+                            pantalla, fuente_titulos, fuente_botones, pos_mouse, 
+                            nivel_5_desbloqueado, postales, True
+                        )
+                        pygame.display.flip()
+                        pygame.time.delay(180) # Colchón obligatorio para escuchar el mp3
                         
-                        # 3. Saltamos de interfaz de forma limpia
+                        # 3. Saltamos al menú de inicio de forma segura
                         estado_actual = cte.ESTADO_MENU
 
             # Clics Adentro de la Partida Activa
@@ -415,7 +270,6 @@ def main():
             elif estado_actual == cte.ESTADO_JUEGO_ACTIVO:
                 # Validamos el instante exacto del click
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    
                     # Clic Izquierdo (Botón 1): Construir Torres patrias
                     if event.button == 1:
                         parcela_seleccionada = None
@@ -439,48 +293,77 @@ def main():
                     elif event.button == 3:
                         cabildo.entrenar_ingeniero(grupo_ingenieros, grupo_torres)
 
-            # Clics en la pantalla de Game Over (CORREGIDO)
+            # --- CAPTURA DE EVENTOS EN PANTALLA DE DERROTA (CORREGIDO) ---
             elif estado_actual == cte.ESTADO_GAME_OVER:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     
-                    # SI ELIGE REINTENTAR: Revisa la posicion [0] (Izquierda)
-                    if r_v_go[0].collidepoint(pos_mouse):
-                        camino_nivel_1 = [(105, 615), (210, 615), (210, 480), (820, 480), (820, 320), (185, 320), (185, 175), (512, 175)]
-                        cabildo = Base(vidas=20)
-                        cabildo.nombre = "Cabildo de Buenos Aires"
-                        cabildo.rect.center = (512, 175)
-                        grupo_torres = pygame.sprite.Group()
-                        grupo_enemigos = pygame.sprite.Group()
-                        grupo_ingenieros = pygame.sprite.Group()
-                        grupo_proyectiles = pygame.sprite.Group()
-                        grupo_aliados_moviles = pygame.sprite.Group()
-                        administrador_oleadas = WaveManager(camino=camino_nivel_1)
-                        dinero_patria = cte.DINERO_INICIAL
+                    # Clic en REINTENTAR DEFENSA
+                    if r_reintentar.collidepoint(pos_mouse):
+                        if snds_siguiente: 
+                            random.choice(snds_siguiente).play()
+                        
+                        print("\n========================================================")
+                        print(" ¡REINTENTANDO MISIÓN! Reorganizando las milicias criollas...")
+                        print("========================================================\n")
+                        
+                        grupo_enemigos.empty()
+                        grupo_torres.empty()
+                        grupo_proyectiles.empty()
+                        grupo_ingenieros.empty()
+                        grupo_aliados_moviles.empty()
+                        
+                        cabildo = Base() 
+                        cabildo.vidas = 20 
+                        
+                        # --- CORRECCIÓN CRÍTICA DE OLEADAS ---
+                        administrador_oleadas.oleada_actual = 1
+                        # Volvemos a inyectar tus 5 soldados de la horda 1 del inicio del juego (GDD)
+                        administrador_oleadas.enemigos_pendientes = ["soldado_raso"] * 5
+                        
+                        administrador_oleadas.en_descanso = True
+                        administrador_oleadas.tiempo_inicio_descanso = tiempo_actual
+                        dinero_patria = 150 
+                        
                         estado_actual = cte.ESTADO_JUEGO_ACTIVO
                         
-                    # SI ELIGE VOLVER: ¡CORRECCIÓN! Cambiamos a la posicion [1] (Derecha)
-                    elif r_v_go[1].collidepoint(pos_mouse):
-                        estado_actual = cte.ESTADO_MENU
+                    # Clic en VOLVER AL MENÚ PRINCIPAL desde la derrota
+                    elif r_v_go.collidepoint(pos_mouse):
+                        # 1. El mánager reproduce el audio aleatorio de retroceso
+                        administrador_sonidos.play_volver()
+                            
+                        # 2. El mánager se encarga de recargar y encender la orquesta War Plan de forma autónoma
+                        administrador_sonidos.reproducir_musica_menu()
+                        
+                        estado_actual = cte.ESTADO_MENU # Regresamos a salvo al inicio
 
             elif estado_actual == cte.ESTADO_FINAL_MISION:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    # Si haces clic adentro del rectangulo virtual del boton volver, regresas a salvo al menu
+                    
+                    # Clic en CONTINUAR CAMPAÑA
                     if r_v_win.collidepoint(pos_mouse):
+                        # 1. El mánager reproduce el audio aleatorio de avance
+                        administrador_sonidos.play_siguiente()
+                            
+                        pygame.time.delay(180) # Colchón obligatorio para escuchar el mp3
+                        
+                        # 2. El mánager reactiva la música de los menúes de forma segura
+                        administrador_sonidos.reproducir_musica_menu()
+                        
                         estado_actual = cte.ESTADO_MENU
 
 
         # --- LOGICA Y RENDERIZADO POR FUNCIÓN ---
         if estado_actual == cte.ESTADO_BIENVENIDA:
-            administrador_menus.dibujar_bienvenida(pantalla, fuente_titulos, fuente_botones, fondo_bienvenida)
+            administrador_menus.dibujar_bienvenida(pantalla, fuente_titulos, fuente_botones)
             
         elif estado_actual == cte.ESTADO_MENU:
             click_lista = pygame.mouse.get_pressed()
-            click_izquierdo_activo = click_lista[0]
+            click_izquierdo_activo = click_lista
             
-            # 1. Renderizamos la interfaz visual limpia con sus 11 argumentos estándar
+            # RECORTE DE LLAMADO: Pasamos el llamado limpio terminando en tiempo_actual
             r_jugar, r_glosario, r_creditos, r_salir = administrador_menus.dibujar_menu_principal(
                 pantalla, fuente_titulos, pos_mouse, btn_com, btn_glo, btn_cre, btn_sal, 
-                click_izquierdo_activo, fondo_menu_grande, logo_juego, tiempo_actual
+                click_izquierdo_activo, tiempo_actual
             )
             
             # 2. CONTROL GLOBAL DE AUDIO ANTI-SPAM (NUEVO)
@@ -491,16 +374,16 @@ def main():
             elif r_creditos.collidepoint(pos_mouse): id_boton_actual = 2
             elif r_salir.collidepoint(pos_mouse): id_boton_actual = 3
             
-            # Si el mouse entró a un botón válido
+            # Si el mouse entró a un botón válido en tu menú principal
             if id_boton_actual != -1:
-                # Nos aseguramos de tener inicializadas estas variables arriba de tu while correr:
-                # control_hover = {"activo": -1} y ultimo_sonido_hover = 0
                 if control_hover["activo"] != id_boton_actual:
-                    # Validamos que hayan pasado más de 200ms desde el último point.mp3 del sistema
+                    # Validamos el colchón de 200 milisegundos para extinguir la ametralladora
                     if tiempo_actual - ultimo_sonido_hover > 200:
-                        if snd_hover:
-                            snd_hover.play() # Suena impecable una sola vez
-                        ultimo_sonido_hover = tiempo_actual # Registramos el tiempo del pitido
+                        
+                        # CORRECCIÓN INDUSTRIAL: El mánager ejecuta el point.mp3 de forma segura
+                        administrador_sonidos.play_hover()
+                        
+                        ultimo_sonido_hover = tiempo_actual # Registramos el tiempo del pitido global
                     control_hover["activo"] = id_boton_actual
             else:
                 # Si el mouse está en el fondo del pergamino fuera de los botones, liberamos el foco
@@ -508,23 +391,43 @@ def main():
 
         elif estado_actual == cte.ESTADO_JUGAR_SELECCION:
             click_lista = pygame.mouse.get_pressed()
-            click_izq = click_lista[0]
+            click_izquierdo_activo = click_lista
             
-            # CORRECCIÓN: Agregamos 'fondo_seleccion' al final del llamado
-            r_n1, r_n2, r_n3, r_n4, r_n5, r_volver = administrador_menus.dibujar_seleccion_niveles(
+            # --- BYPASS INDUSTRIAL CONTRA EL VALUEERROR ---
+            # Guardamos TODO lo que escupa la función adentro de una única variable contenedora
+            retorno_mapas = administrador_menus.dibujar_seleccion_niveles(
                 pantalla, fuente_titulos, fuente_botones, pos_mouse, 
-                nivel_5_desbloqueado, postales, click_izq, fondo_seleccion
+                nivel_5_desbloqueado, postales, click_izquierdo_activo
             )
             
-        elif estado_actual in [cte.ESTADO_GLOSARIO, cte.ESTADO_CREDITOS]:
-            # CORRECCIÓN: Asegurate de agregar 'r_v_estatico =' al principio de esta línea
-            r_v_estatico = administrador_menus.dibujar_pantallas_estaticas(pantalla, estado_actual, fuente_titulos, fuente_botones, pos_mouse)
-            if not musica_menu_sonando:
-                pygame.mixer.music.play(-1)
-                musica_menu_sonando = True
+            # Asignamos las variables de forma segura leyendo las posiciones del contenedor.
+            # Esto evita que el programa crashee sin importar si la función devuelve 2, 4 o 5 elementos.
+            r_n1 = retorno_mapas[0]
+            
+            # Buscamos el último elemento de la tupla (que siempre es el botón volver en tu UIManager)
+            r_volver = retorno_mapas[-1]
+            
+            # Resguardo preventivo para tus otras portadas de la matriz por si las lee tu captura de clics
+            if len(retorno_mapas) >= 5:
+                r_n2 = retorno_mapas[1]
+                r_n3 = retorno_mapas[2]
+                r_n4 = retorno_mapas[3]
             
         elif estado_actual == cte.ESTADO_GAME_OVER:
-            r_v_go = administrador_menus.dibujar_game_over(pantalla, fuente_titulos, fuente_botones, pos_mouse, fondo_game_over)
+            # Sincronizamos con tus variables nativas de la derrota: r_reintentar y r_v_go
+            r_reintentar, r_v_go = administrador_menus.dibujar_game_over(pantalla, fuente_titulos, fuente_botones, pos_mouse)
+
+        elif estado_actual == cte.ESTADO_FINAL_MISION:
+            # RECORTE DE LLAMADO: Dejamos el llamado limpio terminando en cabildo.vidas
+            r_v_win = administrador_menus.dibujar_mision_cumplida(
+                pantalla, fuente_titulos, fuente_botones, pos_mouse, dinero_patria, cabildo.vidas
+            )
+
+        elif estado_actual in [cte.ESTADO_GLOSARIO, cte.ESTADO_CREDITOS]:
+            r_v_estatico = administrador_menus.dibujar_pantallas_estaticas(pantalla, estado_actual, fuente_titulos, fuente_botones, pos_mouse)
+            
+            # CORRECCIÓN DEFINITIVA: El mánager controla el streaming colonial de fondo
+            administrador_sonidos.reproducir_musica_menu()
 
         elif estado_actual == cte.ESTADO_GLOSARIO:
             # CORRECCIÓN: Dejamos el llamado original sin arrastrar variables extras
@@ -533,52 +436,70 @@ def main():
         elif estado_actual == cte.ESTADO_CREDITOS:
             r_volver = administrador_menus.dibujar_pantallas_estaticas(pantalla, estado_actual, fuente_titulos, fuente_botones, pos_mouse)
             
-        elif estado_actual == cte.ESTADO_FINAL_MISION:
-            r_v_win = administrador_menus.dibujar_mision_cumplida(
-                pantalla, fuente_titulos, fuente_botones, pos_mouse, 
-                fondo_victoria, dinero_patria, cabildo.vidas if cabildo else 20,
-                interfaz_grafica.icono_moneda if interfaz_grafica else None
-            )
-            
         elif estado_actual == cte.ESTADO_JUEGO_ACTIVO:
-            # 1. CONTROL DE TIEMPO Y LÓGICA INTERNA (Se ejecutan una sola vez)
-            grupo_torres.update(grupo_enemigos, grupo_proyectiles, tiempo_actual)
+            # 1. CENTRALIZADOR DE DERROTA INDUSTRIAL (Evita pisadas de variables y limpia el buffer)
+            if cabildo.vidas <= 0:
+                print("\n========================================================")
+                print(" ¡EL CABILDO HA CAÍDO! Las hordas realistas tomaron la plaza.")
+                print(f" Horda alcanzada antes del colapso patriota: Horda {administrador_oleadas.oleada_actual}")
+                print("========================================================\n")
+                estado_actual = cte.ESTADO_GAME_OVER
+                continue # Corta el frame acá para evitar procesamientos colgados
+
+            # 2. SILENCIADOR AUTOMÁTICO DE MÚSICA DEL MENÚ
+            administrador_sonidos.detener_musica() 
+
+            # 3. ACTUALIZACIÓN DE ENTIDADES CONTINUA (SINCRO TOTAL CON TU CLASE TORRE)
+            grupo_enemigos.update() 
+            grupo_torres.update(grupo_enemigos, grupo_proyectiles, tiempo_actual) 
             grupo_proyectiles.update(grupo_enemigos)
             grupo_aliados_moviles.update(grupo_enemigos, tiempo_actual)
             grupo_ingenieros.update(grupo_enemigos)
             cabildo.update(grupo_enemigos, tiempo_actual)
 
-            if musica_menu_sonando:
-                pygame.mixer.music.stop() # Apaga el streaming del mp3 al instante
-                musica_menu_sonando = False
-
-            # Recorrido de los soldados invasores por los waypoints
+            # 4. PROCESADOR DE IMPACTOS, RECOMPENSAS Y ANIMACIONES DE MUERTE
+            # REMOVEMOS el segundo 'enemigo.update()' de acá adentro para que no vayan rápido
             for enemigo in list(grupo_enemigos):
-                enemigo.update()
+                # Caso A: El invasor esquivó tus defensas y vulneró el Cabildo
                 if enemigo.ha_llegado_al_final:
-                    cabildo.recibir_danio(enemigo.danio, group_enemigos if 'group_enemigos' in locals() else grupo_enemigos)
-                    enemigo.kill()
-                elif not enemigo.alive():
+                    cabildo.recibir_danio(enemigo.danio, grupo_enemigos)
+                    enemigo.kill() 
+                    continue
+
+                # Caso B: El enemigo fue alcanzado por tus torres o por el Grito de la Patria
+                # Validamos si se quedó sin salud (vida <= 0) pero todavía camina de forma normal
+                elif enemigo.vida <= 0 and not getattr(enemigo, "ya_pago_recompensa", False):
+                    # 1. Le pagamos la plata de la corona española de forma inmediata al HUD
                     dinero_patria += enemigo.recompensa
+                    
+                    # 2. Le clavamos el cerrojo para cobrar una sola vez y no duplicar fondos
+                    enemigo.ya_pago_recompensa = True
+                    
+                    # 3. Activamos su bandera nativa para congelar sus vectores y que empiece a caer
+                    enemigo.esta_muerto = True
+                    enemigo.frame_actual = 0
+                    enemigo.ultimo_refresco = pygame.time.get_ticks()
 
-            # Validacion de condiciones de fin de partida
-            if cabildo.vidas <= 0:
-                estado_actual = cte.ESTADO_GAME_OVER
-            else:
-                # El manager corre con tu resguardo nativo de hordas
-                administrador_oleadas.update(tiempo_actual, grupo_enemigos, cabildo)
+                # Caso C: El soldado ya cobró y está pasando por sus cuadros de desvanecimiento
+                # Dejamos que corra libre su render en pantalla sin interferir con su caminata
+                elif getattr(enemigo, "esta_muerto", False):
+                    pass
 
+            # 5. EL MÁNAGER DE OLEADAS GESTIONA LAS HORDAS DE FORMA SEGURA
+            administrador_oleadas.update(tiempo_actual, grupo_enemigos, cabildo)
+
+            # 6. DETECTOR DE VICTORIA REVOLUCIONARIA DEFINITIVA
             if administrador_oleadas.oleada_actual > 3:
                 estado_actual = cte.ESTADO_FINAL_MISION
 
-            # 2. CAPAS DE RENDERIZADO VISUAL (De atras hacia adelante de forma prolija)
-            # Capa Fondo: Primero estampamos el mapa pixel art del Cabildo
-            if mapa_cabildo:
-                pantalla.blit(mapa_cabildo, (0, 0))
-            else:
-                pantalla.fill((50, 50, 50))
+            # ========================================================
+            # 2. CAPAS DE RENDERIZADO VISUAL (CORREGIDO CONTRA EL NAMEERROR)
+            # ========================================================
+            # Capa Fondo: El LevelManager se encarga de estampar la textura correspondiente de forma dinámica
+            mapa_fondo_en_combate = administrador_niveles.cargar_mapa_nivel(nivel_activo)
+            pantalla.blit(mapa_fondo_en_combate, (0, 0))
 
-            # Capa Intermedia: El destello blanco transparente de tus parcelas calibradas a ojo
+            # Capa Intermedia: El destello blanco de tus parcelas calibradas a ojo (Sigue igual abajo...)
             for parcela in parcelas_validas:
                 if parcela.collidepoint(pos_mouse):
                     surf_indicador = pygame.Surface((parcela.width, parcela.height), pygame.SRCALPHA)

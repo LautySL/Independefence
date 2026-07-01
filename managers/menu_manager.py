@@ -7,117 +7,138 @@ class MenuManager:
     
     def __init__(self):
         self.ultimo_sonido_hover_global = 0
+        
+        # --- CARGA INTEGRADA DE RECURSOS EN LA MEMORIA DEL OBJETO ---
+        try:
+            # 1. Cargamos y escalamos el logotipo oficial de Independefence
+            img_logo = pygame.image.load("assets/Independefence.png").convert_alpha()
+            self.logo_juego = pygame.transform.scale(img_logo, (450, 150))
+            
+            # 2. Cargamos y escalamos el fondo grande para el paneo cinemático
+            img_fondo = pygame.image.load("assets/interfaces/menu_principal.png").convert()
+            self.fondo_menu_grande = pygame.transform.scale(img_fondo, (1124, 868))
+
+            # --- INYECCIÓN: FONDOS ESTÁTICOS DE PANTALLAS FINALES Y MAPAS ---
+            # Victoria Definitiva
+            img_vic = pygame.image.load("assets/interfaces/mision_cumplida.png").convert()
+            self.fondo_victoria = pygame.transform.scale(img_vic, (cte.ANCHO_DE_PANTALLA, cte.ALTO_DE_PANTALLA))
+            
+            # Selección de Niveles
+            img_sel = pygame.image.load("assets/interfaces/seleccion_de_nivel.png").convert()
+            self.fondo_seleccion = pygame.transform.scale(img_sel, (cte.ANCHO_DE_PANTALLA, cte.ALTO_DE_PANTALLA))
+            
+            # Derrota Definitiva
+            img_gov = pygame.image.load("assets/interfaces/game_over.png").convert()
+            self.fondo_game_over = pygame.transform.scale(img_gov, (cte.ANCHO_DE_PANTALLA, cte.ALTO_DE_PANTALLA))
+
+            # Bienvenida
+            img_bien = pygame.image.load("assets/interfaces/Pantalla_de_bienvenida.png").convert()
+            self.fondo_bienvenida = pygame.transform.scale(img_bien, (cte.ANCHO_DE_PANTALLA, cte.ALTO_DE_PANTALLA))
+            
+        except Exception as e:
+            print(f"Error al cargar recursos estéticos en el MenuManager: {e}")
+            self.logo_juego = self.fondo_menu_grande = None
+            self.fondo_victoria = self.fondo_seleccion = self.fondo_game_over = None
 
     # ========================================================
     # FUNCIONES AUXILIARES PARA CADA PANTALLA DEL DIAGRAMA
     # ========================================================
 
     # CORRECCIÓN DEFINITIVA: Tabulado a la derecha y con 'self' incorporado en el paréntesis
-    def dibujar_bienvenida(self, pantalla, f_tit, f_bot, imagen_fondo):
-        if imagen_fondo:
-            pantalla.blit(imagen_fondo, (0, 0))
+    def dibujar_bienvenida(self, pantalla, f_tit, f_bot):
+        # El truco: Leemos la variable directamente desde self de forma interna
+        if self.fondo_bienvenida:
+            pantalla.blit(self.fondo_bienvenida, (0, 0))
         else:
             pantalla.fill(cte.BLACK)
 
         # --- INDICADOR INFERIOR CON CONTORNO REAL ---
         if (pygame.time.get_ticks() // 500) % 2 == 0:
             texto_start = "PULSA CUALQUIER TECLA PARA EMPEZAR"
-            color_crema = (245, 222, 179) # Tono arena
-            color_borde = (0, 0, 0)       # Negro absoluto
+            color_crema = (245, 222, 179) 
+            color_borde = (0, 0, 0)       
 
-            # Creamos las dos superficies independientes
             surf_borde = f_bot.render(texto_start, True, color_borde)
             surf_frente = f_bot.render(texto_start, True, color_crema)
-            
             rect_final = surf_frente.get_rect(center=(512, 630))
 
-            # Dibujamos el texto negro ensanchado en cruz de 2 pixeles (Arriba, Abajo, Izquierda, Derecha)
-            pantalla.blit(surf_borde, (rect_final.x - 2, rect_final.y))
-            pantalla.blit(surf_borde, (rect_final.x + 2, rect_final.y))
-            pantalla.blit(surf_borde, (rect_final.x, rect_final.y - 2))
-            pantalla.blit(surf_borde, (rect_final.x, rect_final.y + 2))
+            for dx, dy in [(-2,0), (2,0), (0,-2), (0,2), (-2,-2), (2,-2), (-2,2), (2,2)]:
+                pantalla.blit(surf_borde, (rect_final.x + dx, rect_final.y + dy))
             
-            # También en las diagonales para rellenar los huecos del pixel art
-            pantalla.blit(surf_borde, (rect_final.x - 2, rect_final.y - 2))
-            pantalla.blit(surf_borde, (rect_final.x + 2, rect_final.y - 2))
-            pantalla.blit(surf_borde, (rect_final.x - 2, rect_final.y + 2))
-            pantalla.blit(surf_borde, (rect_final.x + 2, rect_final.y + 2))
-
-            # Capa final: La letra limpia color crema arriba en el centro
             pantalla.blit(surf_frente, rect_final)
 
     # CORRECCIÓN DE CABECERA: Borramos 'ultimo_sonido_hover' del final del parentesis
-    def dibujar_menu_principal(self, pantalla, f_tit, pos_mouse, btn_com, btn_glo, btn_cre, btn_sal, click_presionado, img_fondo, img_logo, tiempo_actual):
+    def dibujar_menu_principal(self, pantalla, f_tit, pos_mouse, btn_com, btn_glo, btn_cre, btn_sal, click_presionado, tiempo_actual):
         import math 
     
-        if img_fondo:
-            # Paneo cinemático lento de fondo
+        # El truco: leemos las variables directamente desde self de forma interna
+        if self.fondo_menu_grande:
             velocidad_paneo = tiempo_actual / 1500.0
-            desvío_x = int(-50 + math.sin(velocidad_paneo) * 50)
-            desvío_y = int(-50 + math.cos(velocidad_paneo * 0.8) * 50)
-            pantalla.blit(img_fondo, (desvío_x, desvío_y))
+            desvio_x = int(-50 + math.sin(velocidad_paneo) * 50)
+            desvio_y = int(-50 + math.cos(velocidad_paneo * 0.8) * 50)
+            pantalla.blit(self.fondo_menu_grande, (desvio_x, desvio_y))
         else:
             pantalla.fill((30, 30, 30))
     
-        if img_logo:
-            pantalla.blit(img_logo, img_logo.get_rect(center=(512, 110)))
+        if self.logo_juego:
+            pantalla.blit(self.logo_juego, self.logo_juego.get_rect(center=(512, 110)))
         else:
-            txt_m = f_tit.render("INDEPENDEFENCE", True, (245, 222, 179))
-            pantalla.blit(txt_m, txt_m.get_rect(center=(512, 120)))
+            self.blit_con_contorno(pantalla, "INDEPENDEFENCE", f_tit, (245, 222, 179), (512, 120), es_centro=True)
 
-        # Construimos las 4 zonas interactivas de tu captura
-        r_jugar = self.dibujar_boton_imagen(pantalla, btn_com[0], btn_com[1], btn_com[2], 512, 240, pos_mouse, click_presionado)
-        r_glosario = self.dibujar_boton_imagen(pantalla, btn_glo[0], btn_glo[1], btn_glo[2], 512, 340, pos_mouse, click_presionado)
-        r_creditos = self.dibujar_boton_imagen(pantalla, btn_cre[0], btn_cre[1], btn_cre[2], 512, 440, pos_mouse, click_presionado)
-        r_salir = self.dibujar_boton_imagen(pantalla, btn_sal[0], btn_sal[1], btn_sal[2], 512, 540, pos_mouse, click_presionado)
+        # === BOTONERA ULTRA COMPACTA E INTELIGENTE ===
+        # Le pasamos la lista entera una sola vez y el método se encarga del resto
+        r_jugar = self.dibujar_boton_imagen(pantalla, btn_com, 512, 240, pos_mouse, click_presionado)
+        r_glosario = self.dibujar_boton_imagen(pantalla, btn_glo, 512, 340, pos_mouse, click_presionado)
+        r_creditos = self.dibujar_boton_imagen(pantalla, btn_cre, 512, 440, pos_mouse, click_presionado)
+        r_salir = self.dibujar_boton_imagen(pantalla, btn_sal, 512, 540, pos_mouse, click_presionado)
     
         return r_jugar, r_glosario, r_creditos, r_salir
 
-    def dibujar_seleccion_niveles(self, pantalla, f_tit, f_bot, pos_mouse, nivel_5_desbloqueado, postales, click_presionado, imagen_fondo):
-        if imagen_fondo:
-            # Proyectamos tu ilustracion cubriendo todo el lienzo de 1024x768
-            pantalla.blit(imagen_fondo, (0, 0))
+    def dibujar_seleccion_niveles(self, pantalla, f_tit, f_bot, pos_mouse, nivel_5_desbloqueado, dict_postales, click_presionado):
+        """Dibuja la grilla de las postales con tamaño y altura calibrables a gusto por el programador."""
+        if self.fondo_seleccion:
+            pantalla.blit(self.fondo_seleccion, (0, 0))
         else:
-            # Fondo marron de auxilio por si se borra el archivo sin querer
-            pantalla.fill((40, 20, 20))
-    
-        # 1. TITULO PRINCIPAL DE LA PANTALLA
-        txt_s = f_tit.render("SELECCIONA LA CAMPAÑA", True, (255, 255, 0))
-        pantalla.blit(txt_s, txt_s.get_rect(center=(512, 50)))
-    
-        # --------------------------------------------------------
-        # FILA 1: EL CABILDO (N1) Y LA CATEDRAL (N2)
-        # --------------------------------------------------------
-        lbl_n1 = f_bot.render("NIVEL 1: EL CABILDO", True, (255, 255, 0))
-        pantalla.blit(lbl_n1, lbl_n1.get_rect(center=(340, 110)))
-    
-        lbl_n2 = f_bot.render("NIVEL 2: LA CATEDRAL", True, (255, 255, 0))
-        pantalla.blit(lbl_n2, lbl_n2.get_rect(center=(684, 110)))
-    
-        rn1 = self.dibujar_postal_nivel(pantalla, postales["c1"][0], postales["c1"][1], postales["c1"][2], 340, 255, pos_mouse, click_presionado)
-        rn2 = self.dibujar_postal_nivel(pantalla, postales["c2"][0], postales["c2"][1], postales["c2"][2], 684, 255, pos_mouse, click_presionado)
-    
-        # --------------------------------------------------------
-        # FILA 2: EL FORTIN (N3) Y LA RECOVA (N4)
-        # --------------------------------------------------------
-        lbl_n3 = f_bot.render("NIVEL 3: EL FORTIN", True, (255, 255, 0))
-        pantalla.blit(lbl_n3, lbl_n3.get_rect(center=(340, 410)))
-    
-        lbl_n4 = f_bot.render("NIVEL 4: LA RECOVA", True, (255, 255, 0))
-        pantalla.blit(lbl_n4, lbl_n4.get_rect(center=(684, 410)))
-    
-        rn3 = self.dibujar_postal_nivel(pantalla, postales["c3"][0], postales["c3"][1], postales["c3"][2], 340, 555, pos_mouse, click_presionado)
-        rn4 = self.dibujar_postal_nivel(pantalla, postales["c4"][0], postales["c4"][1], postales["c4"][2], 684, 555, pos_mouse, click_presionado)
-    
-        # --- ESPACIO RESERVADO NIVEL 5 ---
-        rn5 = pygame.Rect(0, 0, 0, 0)
-        if nivel_5_desbloqueado:
-            rn5 = self.dibujar_postal_nivel(pantalla, postales["c5"][0], postales["c5"][1], postales["c5"][2], 875, 255, pos_mouse, click_presionado)
+            pantalla.fill((255, 235, 205))
+            
+        self.blit_con_contorno(pantalla, "SELECCION DE CAMPANAS", f_tit, (255, 215, 0), (512, 60), es_centro=True)
         
-        # --- BOTON VOLVER ABAJO A LA IZQUIERDA ---
-        rv = self.crear_boton_pixel(pantalla, "VOLVER AL MENU", 120, 715, f_bot, pos_mouse)
-    
-        return rn1, rn2, rn3, rn4, rn5, rv
+        tamano_letra_gusto = 32 
+        f_ajustable = pygame.font.Font(None, tamano_letra_gusto) # Si usás un .ttf, cambialo por None
+
+        # 2. ALTURA EN FILA SUPERIOR (Cabildo y Catedral)
+        altura_y_superior = 135 
+
+        # 3. ALTURA EN FILA INFERIOR (Fortín y Recova)
+        altura_y_inferior = 435 
+        
+        color_letras = (255, 255, 255) # Blanco puro con contorno negro
+
+        # === APLICACIÓN MILIMÉTRICA EN LA GRILLA ===
+        # Nivel 1: El Cabildo (Centro vertical X = 340)
+        self.blit_con_contorno(pantalla, "EL CABILDO", f_ajustable, color_letras, (340, altura_y_superior), es_centro=True)
+        r_n1 = self.dibujar_postal_nivel(pantalla, dict_postales["c1"], 215, 135, pos_mouse, click_presionado)
+        
+        # Nivel 2: La Catedral (Centro vertical X = 684)
+        self.blit_con_contorno(pantalla, "LA CATEDRAL", f_ajustable, color_letras, (684, altura_y_superior), es_centro=True)
+        r_n2 = self.dibujar_postal_nivel(pantalla, dict_postales["c2"], 559, 135, pos_mouse, click_presionado)
+        
+        # Nivel 3: El Fortín (Centro vertical X = 340)
+        self.blit_con_contorno(pantalla, "EL FORTIN", f_ajustable, color_letras, (340, altura_y_inferior), es_centro=True)
+        r_n3 = self.dibujar_postal_nivel(pantalla, dict_postales["c3"], 215, 435, pos_mouse, click_presionado)
+        
+        # Nivel 4: La Recova (Centro vertical X = 684)
+        self.blit_con_contorno(pantalla, "LA RECOVA", f_ajustable, color_letras, (684, altura_y_inferior), es_centro=True)
+        r_n4 = self.dibujar_postal_nivel(pantalla, dict_postales["c4"], 559, 435, pos_mouse, click_presionado)
+        
+        # Nivel 5: Especial
+        r_n5 = pygame.Rect(750, 220, 250, 50)
+        if nivel_5_desbloqueado:
+            self.blit_con_contorno(pantalla, "QUINTA DE OLIVOS", f_ajustable, color_letras, (875, 200), es_centro=True)
+            r_n5 = self.dibujar_postal_nivel(pantalla, dict_postales["c5"], 750, 220, pos_mouse, click_presionado)
+            
+        r_volver = self.crear_boton_pixel(pantalla, "VOLVER AL MENU", 120, 715, f_bot, pos_mouse)
+        return r_n1, r_n2, r_n3, r_n4, r_volver
 
     def blit_con_contorno(self, pantalla, texto, fuente, color_frente, posicion, es_centro=False):
         """Renderiza un texto con un borde negro grueso de 2 píxeles para mejorar el contraste."""
@@ -265,12 +286,11 @@ class MenuManager:
         r_v = self.crear_boton_pixel(pantalla, "VOLVER AL MILITAR (MENU)", 512, 720, f_bot, pos_mouse)
         return r_v
 
-    def dibujar_game_over(self, pantalla, f_tit, f_bot, pos_mouse, imagen_fondo):
-        if imagen_fondo:
-            # Estampamos la ilustracion en pantalla completa
-            pantalla.blit(imagen_fondo, (0, 0))
+    def dibujar_game_over(self, pantalla, f_tit, f_bot, pos_mouse):
+        if self.fondo_game_over:
+            pantalla.blit(self.fondo_game_over, (0, 0))
         else:
-            pantalla.fill((40, 20, 20))
+            pantalla.fill((50, 10, 10))
             txt_go = f_tit.render("GAME OVER", True, (255, 0, 0))
             pantalla.blit(txt_go, txt_go.get_rect(center=(512, 300)))
 
@@ -283,44 +303,42 @@ class MenuManager:
         
         return r_reintentar, r_volver
 
-    def dibujar_mision_cumplida(self, pantalla, f_tit, f_bot, pos_mouse, imagen_fondo, dinero_final, vidas_finales, icono_moneda=None):
-        if imagen_fondo:
-            pantalla.blit(imagen_fondo, (0, 0))
+    def dibujar_mision_cumplida(self, pantalla, f_tit, f_bot, pos_mouse, dinero_final, vidas_finales):
+        if self.fondo_victoria:
+            pantalla.blit(self.fondo_victoria, (0, 0))
         else:
-            pantalla.fill((20, 40, 20))
+            pantalla.fill((10, 50, 10))
             txt_v = f_tit.render("MISION CUMPLIDA", True, (255, 255, 0))
             pantalla.blit(txt_v, txt_v.get_rect(center=(512, 200)))
 
-        # --- COLOR MARRÓN COLONIAL PARA LA LETRA (Integra mejor en los pergaminos) ---
+        # --- MOTOR DE CARGA AUTÓNOMA DE MONEDA (NUEVO) ---
+        if not hasattr(self, "moneda_victoria"):
+            try:
+                # Modificá esta ruta si tu archivo de moneda/oro real se llama o está en otro lado:
+                img_m = pygame.image.load("assets/interfaces/moneda.png").convert_alpha()
+                self.moneda_victoria = pygame.transform.scale(img_m, (36, 36))
+            except:
+                self.moneda_victoria = None
+
         color_texto = (60, 40, 20)
 
-        # ========================================================
         # 1. PERGAMINO DE PUNTOS (Izquierda)
-        # ========================================================
         puntos_score = vidas_finales * 100
         txt_puntos = f_tit.render(f"{puntos_score}", True, color_texto)
-        # MODIFICACIÓN: Cambiamos 600 por 575
         pantalla.blit(txt_puntos, txt_puntos.get_rect(center=(265, 550))) 
         
-        # ========================================================
         # 2. PERGAMINO DE DINERO RESTANTE + MONEDA (Derecha)
-        # ========================================================
         txt_dinero = f_tit.render(f"{dinero_final}", True, color_texto)
-        # MODIFICACIÓN: Cambiamos 600 por 575
         rect_dinero = txt_dinero.get_rect(center=(745, 550)) 
         pantalla.blit(txt_dinero, rect_dinero)
         
-        # La moneda se acomoda sola de forma automatica porque lee la posicion del 'rect_dinero'
-        if icono_moneda:
-            moneda_grande = pygame.transform.scale(icono_moneda, (36, 36))
-            pantalla.blit(moneda_grande, (rect_dinero.x - 45, rect_dinero.y + 4))
+        # Si la moneda se cargó con éxito de forma autónoma, la estampamos
+        if self.moneda_victoria:
+            pantalla.blit(self.moneda_victoria, (rect_dinero.x - 45, rect_dinero.y + 4))
 
-        # ========================================================
         # 3. BOTÓN INTERACTIVO PARA REGRESAR (Abajo al centro)
-        # ========================================================
-        # Lo subimos apenas unos pixeles a Y=715 para que no pise la bandera argentina del borde inferior
-        r_v = crear_boton_pixel(pantalla, "REGRESAR AL MENU DE CAMPANA", 512, 715, f_bot, pos_mouse)
-        return r_v
+        r_v_win = self.crear_boton_pixel(pantalla, "REGRESAR AL MENU DE CAMPANA", 512, 715, f_bot, pos_mouse)
+        return r_v_win
 
     def crear_boton_pixel(self, pantalla, texto, centro_x, centro_y, fuente, pos_mouse):
         """Dibuja un texto color crema con contorno negro de 360 grados estilo pixel art."""
@@ -361,27 +379,16 @@ class MenuManager:
     # Declaramos la variable global arriba de todo en el archivo main.py (abajo de los imports)
     ultimo_sonido_hover_global = 0
 
-    def dibujar_boton_imagen(self, pantalla, img_norm, img_sel, img_pre, centro_x, centro_y, pos_mouse, click_presionado):
-        """Maneja los 3 estados visuales del botón y devuelve su rectángulo de colisión."""
+    def dibujar_boton_imagen(self, pantalla, lista_img, centro_x, centro_y, pos_mouse, click_presionado):
+        """Maneja los 3 estados del botón de madera ANCLADO DESDE EL CENTRO (Para el Menú Principal)."""
+        img_norm = lista_img[0]
+        img_sel = lista_img[1]
+        img_pre = lista_img[2]
+
+        # RESTAURADO: Los botones del menú principal vuelven a centrarse milimétricamente
         rect_pantalla = img_norm.get_rect(center=(centro_x, centro_y))
         imagen_activa = img_norm
         
-        # Verificamos si el cursor colisiona con el marco de madera
-        if rect_pantalla.collidepoint(pos_mouse):
-            if click_presionado:
-                imagen_activa = img_pre   # Estado: Presionado (Madera hundida)
-            else:
-                imagen_activa = img_sel   # Estado: Seleccionado (Luz de hover)
-                
-        pantalla.blit(imagen_activa, rect_pantalla)
-        return rect_pantalla
-
-    def dibujar_postal_nivel(self, pantalla, img_norm, img_sel, img_pre, centro_x, centro_y, pos_mouse, click_presionado):
-        """Proyecta la imagen de la postal completa en base a la interaccion del mouse."""
-        rect_pantalla = img_norm.get_rect()
-        rect_pantalla.center = (centro_x, centro_y)
-        
-        imagen_activa = img_norm
         if rect_pantalla.collidepoint(pos_mouse):
             if click_presionado:
                 imagen_activa = img_pre
@@ -390,3 +397,40 @@ class MenuManager:
                 
         pantalla.blit(imagen_activa, rect_pantalla)
         return rect_pantalla
+
+    def dibujar_postal_nivel(self, pantalla, lista_img, topleft_x, topleft_y, pos_mouse, click_presionado):
+        """Maneja los 3 estados de las postales ANCLADAS DESDE ARRIBA A LA IZQUIERDA (Para los Mapas)."""
+        img_norm = lista_img[0]
+        img_sel = lista_img[1]
+        img_pre = lista_img[2]
+
+        # MANTENIDO: Las postales se quedan quietas en su cuadrícula perfecta de la captura
+        rect_pantalla = img_norm.get_rect(topleft=(topleft_x, topleft_y))
+        imagen_activa = img_norm
+        
+        if rect_pantalla.collidepoint(pos_mouse):
+            if click_presionado:
+                imagen_activa = img_pre
+            else:
+                imagen_activa = img_sel
+                
+        pantalla.blit(imagen_activa, rect_pantalla)
+        return rect_pantalla
+
+    #para no tener líneas de más en el main
+    def cargar_pack_boton(self, nombre_base):
+        """Carga automáticamente los 3 estados de un botón basándose en su nombre raíz."""
+        estados = ["", "_selected", "_pressed"]
+        pack = []
+        
+        try:
+            for sufijo in estados:
+                ruta = f"assets/interfaces/{nombre_base}{sufijo}.png"
+                img = pygame.image.load(ruta).convert_alpha()
+                pack.append(img)
+            return pack
+        except Exception as e:
+            print(f"Error al cargar el pack del boton '{nombre_base}': {e}")
+            # Auxilio de emergencia: si falla, devuelve superficies vacías para que el juego no crashee
+            aux = pygame.Surface((342, 66))
+            return [aux, aux, aux]
