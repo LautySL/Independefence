@@ -6,6 +6,7 @@ print("Cargando Clases...")
 from config import constants as cte
 from clases.base import Base
 from clases.torre import Torre
+from clases.texto_flotante import TextoFlotante
 print("Cargando Managers...")
 from managers.wave_manager import WaveManager
 from managers.UI_manager import UIManager
@@ -30,6 +31,7 @@ def main():
     reloj = pygame.time.Clock()
     administrador_menus = MenuManager()
     administrador_sonidos = SoundManager()
+    grupo_textos_flotantes = pygame.sprite.Group()
 
     administrador_niveles = LevelManager()
     nivel_activo = 1 # Cambiará de forma interactiva según el clic de la grilla
@@ -295,6 +297,22 @@ def main():
                                     nueva_torre = Torre(parcela_seleccionada.centerx, parcela_seleccionada.centery, tipo=tipo_torre)
                                     grupo_torres.add(nueva_torre)
                                     dinero_patria -= costo
+
+                                    # 2. AUDIO DE COMPRA INDUSTRIAL (NUEVO)
+                                    # Disparará tu efecto ca-ching desde su canal suelto FX
+                                    administrador_sonidos.play_caching()
+                                    
+                                    # 3. EFECTO VISUAL DE GASTO EN PANTALLA (NUEVO)
+                                    # Fabricamos el cartel de dinero restado (ej: -120 o -150 según la tropa)
+                                    cartel_restar = TextoFlotante(
+                                        texto=f"-{costo}", 
+                                        pos_x=parcela_seleccionada.centerx, 
+                                        pos_y=parcela_seleccionada.top, # Nace flotando prolijo arriba de la parcela
+                                        fuente=fuente_botones, # Usa tu tipografía nativa grande del juego
+                                        color=(255, 0, 0) # Rojo nítido revolucionario
+                                    )
+                                    grupo_textos_flotantes.add(cartel_restar)
+
                                     print(f"[ BILLETERA ] Inversión realizada: ¡Desplegados {tipo_torre} en la defensa!")
                                 else:
                                     # Feedback de aviso preventivo en la consola por si intenta trampear la grilla
@@ -467,6 +485,7 @@ def main():
             grupo_aliados_moviles.update(grupo_enemigos, tiempo_actual)
             grupo_ingenieros.update(grupo_enemigos)
             cabildo.update(grupo_enemigos, tiempo_actual)
+            grupo_textos_flotantes.update() 
 
             # 4. PROCESADOR DE IMPACTOS, RECOMPENSAS Y ANIMACIONES DE MUERTE
             # REMOVEMOS el segundo 'enemigo.update()' de acá adentro para que no vayan rápido
@@ -525,7 +544,8 @@ def main():
             grupo_aliados_moviles.draw(pantalla)
             grupo_ingenieros.draw(pantalla)
             grupo_enemigos.draw(pantalla)
-            
+            grupo_textos_flotantes.draw(pantalla) 
+
             # Capa Interfaz: El HUD va arriba de todo para que no lo tapen los personajes
             interfaz_grafica.draw_hud(pantalla, dinero_patria, administrador_oleadas.oleada_actual, cabildo, administrador_oleadas, tiempo_actual)
 

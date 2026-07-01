@@ -22,7 +22,11 @@ class SoundManager:
             self.snd_hover = pygame.mixer.Sound("assets/sonidos/point.mp3")
             self.snd_hover.set_volume(0.5)
             
-            # Pack aleatorio de sonidos para avanzar
+            # --- NUEVA INYECCIÓN: EFECTO DE COMPRA PATRIA ---
+            # Asegurate de que el archivo ca-ching real esté en esta ruta con su nombre exacto
+            self.snd_caching = pygame.mixer.Sound("assets/sonidos/ca-ching.mp3") # o .wav
+            self.snd_caching.set_volume(0.6) # Volumen inicial independiente para los efectos FX
+            
             self.snds_siguiente = [
                 pygame.mixer.Sound("assets/sonidos/siguiente1.mp3"),
                 pygame.mixer.Sound("assets/sonidos/siguiente2.mp3"),
@@ -90,3 +94,8 @@ class SoundManager:
         """Dispara un audio de retroceso aleatorio de la ticketera."""
         if self.snds_volver:
             random.choice(self.snds_volver).play()
+
+    def play_caching(self):
+        """Gatilla el sonido monetario al desplegar tropas patrias en la grilla."""
+        if self.snd_caching:
+            self.snd_caching.play()
