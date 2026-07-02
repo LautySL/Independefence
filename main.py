@@ -102,17 +102,6 @@ def main():
     # Variable de control del GDD para ocultar o revelar el Nivel 5
     nivel_5_desbloqueado = False
 
-        # --- LISTA DE PARCELAS PERMITIDAS PARA CONSTRUIR TORRES ---
-    # Cada Rectangulo tiene el formato: (X_inicial, Y_inicial, Ancho, Alto)
-    # Ajustados para calzar encima de los cuadraditos de tierra de tu mapa
-    parcelas_validas = [
-        pygame.Rect(226, 287, 53, 53),   # Parcela 1: Centro-Izquierda (Al lado de la subida) (NO CAMBIAR)
-        pygame.Rect(307, 417, 53, 53),   # Parcela 2: Abajo a la izquierda (Calle inferior) (NO CAMBIAR)
-        pygame.Rect(605, 553, 53, 53),   # Parcela 3: Abajo al centro (Cerca del mercado) (NO CAMBIAR)
-        pygame.Rect(690, 285, 53, 53),   # Parcela 5: Centro-Derecha (Al lado de la bajada)
-        pygame.Rect(323, 73, 53, 53)    # Parcela 6: Superior Izquierda (Al lado del Cabildo) (NO CAMBIAR)
-    ]
-
     # Buscá estas líneas arriba de tu while correr en el main():
     control_hover = {"activo": -1}
     ultimo_sonido_hover = 0 # Inicializado en 0 como número común y corriente
@@ -121,6 +110,12 @@ def main():
 
     arrastrando_musica = False
     arrastrando_fx = False
+
+    # === VARIABLES EXCLUSIVAS DEL MODO DEBUG: ESTO NOSE TOCA ===
+    juego_en_pausa_debug = False # Se Activa/desactiva la pausa con la tecla P
+    puntos_capturados_test = [] 
+
+    r_volver = pygame.Rect(20, 695, 200, 40)
 
     correr = True
 
@@ -216,27 +211,30 @@ def main():
 
             # Clics de la Selección de Niveles
             elif estado_actual == cte.ESTADO_JUGAR_SELECCION:
-
-                # REMOVEMOS 'administrador_sonidos.reproducir_musica_menu()' de acá arriba.
-                # (Ya no hace falta porque la música del menú se mantiene sonando estable por su cuenta)
-
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-
-                    # === 1. CLIC EN EL NIVEL 1: EL CABILDO ===
-                    if r_n1.collidepoint(pos_mouse):
+                    
+                    # EL SENSOR DEL BOTÓN VOLVER
+                    # Evaluamos tanto tu caja física invisible 'r_volver' como el rango explícito de píxeles
+                    if r_volver.collidepoint(pos_mouse) or ((20 <= pos_mouse[0] <= 220) and (695 <= pos_mouse[1] <= 735)):
+                        # Gatillamos tu efecto aleatorio de retroceso de la ticketera
+                        administrador_sonidos.play_volver()
                         
-                        # --- MOTOR DE AUDIO INDUSTRIAL (NUEVO) ---
-                        # Cortamos en seco la orquesta War Plan y encendemos March Of The Micmacs en loop
+                        pygame.time.delay(150) # Colchón mínimo para dejar sonar el mp3
+                        estado_actual = cte.ESTADO_MENU # Regresamos a salvo al menú principal
+                        continue # Saltamos el frame para limpiar la cola gráfica
+                        
+                    # === 2. CLIC EN EL NIVEL 1: CABILDO ===
+                    elif r_n1.collidepoint(pos_mouse):
                         administrador_sonidos.detener_musica()
                         administrador_sonidos.reproducir_musica_combate()
                         
-                        # Guardamos las coordenadas fijas del camino colonial
-                        camino_nivel_1 = [
-                            (105, 615), (230, 615), (230, 480), (860, 480), 
-                            (860, 350), (215, 350), (215, 175), (512, 175)
-                        ]
+                        nivel_activo = 1
                         
-                        # Inicialización limpia y unificada de tus entidades (Sin duplicaciones)
+                        # === CONTROL DE ATRIBUTOS DINÁMICOS NATIVOS ===
+                        # Le pedimos al mánager de forma elegante las estructuras de este mapa
+                        camino_activo = administrador_niveles.obtener_camino_nivel(nivel_activo)
+                        parcelas_validas = administrador_niveles.obtener_parcelas_nivel(nivel_activo)
+                        
                         cabildo = Base(vidas=20)
                         cabildo.nombre = "Cabildo de Buenos Aires"
                         cabildo.rect.center = (512, 175)
@@ -247,50 +245,68 @@ def main():
                         grupo_proyectiles = pygame.sprite.Group()
                         grupo_aliados_moviles = pygame.sprite.Group()
                         
-                        # El mánager de hordas lee tu vector de forma nativa
-                        administrador_oleadas = WaveManager(camino=camino_nivel_1)
-                        administrador_oleadas.enemigos_pendientes = ["soldado_raso"] * 5
+                        # Pasamos la ruta limpia al mánager de hordas
+                        administrador_oleadas = WaveManager(camino=camino_activo)
                         administrador_oleadas.tiempo_inicio_descanso = tiempo_actual
                         
                         interfaz_grafica = UIManager()
                         dinero_patria = cte.DINERO_INICIAL
-                        nivel_activo = 1 # Le avisamos al LevelManager qué ilustración levantar del disco
-                        
-                        # Saltamos al campo de batalla activos
                         estado_actual = cte.ESTADO_JUEGO_ACTIVO
-                    
-                    # === 2. CLICS EN CAMPANAS BLOQUEADAS (Catedral, Fortín, Recova) ===
-                    elif r_n2.collidepoint(pos_mouse) or r_n3.collidepoint(pos_mouse) or r_n4.collidepoint(pos_mouse):
-                        administrador_sonidos.play_siguiente()
-                        pygame.time.delay(150)
-                        estado_actual = cte.ESTADO_CREDITOS # Desvío provisorio de tu GDD
+
+                    # NIVEL 2: LA CATEDRAL
+                    elif r_n2.collidepoint(pos_mouse):
+                        administrador_sonidos.detener_musica()
+                        administrador_sonidos.reproducir_musica_combate()
                         
-                    # === 3. CLIC EN EL NIVEL EXCLUSIVO 5 ===
-                    elif nivel_5_desbloqueado and r_n5.collidepoint(pos_mouse):
-                        administrador_sonidos.play_siguiente()
-                        pygame.time.delay(150)
-                        estado_actual = cte.ESTADO_CREDITOS
+                        nivel_activo = 2
                         
-                    # === 4. CLIC EN VOLVER AL MENÚ PRINCIPAL ===
-                    elif r_volver.collidepoint(pos_mouse):
-                        administrador_sonidos.play_volver()
+                        # === SINCRO AUTOMÁTICA DE LA CATEDRAL (MUDADO AL MANAGER) ===
+                        camino_activo = administrador_niveles.obtener_camino_nivel(nivel_activo)
+                        parcelas_validas = administrador_niveles.obtener_parcelas_nivel(nivel_activo)
                         
-                        # El mánager redibuja la interfaz limpia usando tu diccionario compacto 'postales'
-                        administrador_menus.dibujar_seleccion_niveles(
-                            pantalla, fuente_titulos, fuente_botones, pos_mouse, 
-                            nivel_5_desbloqueado, postales, True
-                        )
-                        pygame.display.flip()
-                        pygame.time.delay(180) 
+                        cabildo = Base(vidas=20)
+                        cabildo.nombre = "Catedral de Buenos Aires"
+                        cabildo.rect.center = (455, 240) # Posición del portón de la Catedral
                         
-                        estado_actual = cte.ESTADO_MENU
+                        grupo_torres = pygame.sprite.Group()
+                        grupo_enemigos = pygame.sprite.Group()
+                        grupo_ingenieros = pygame.sprite.Group()
+                        grupo_proyectiles = pygame.sprite.Group()
+                        grupo_aliados_moviles = pygame.sprite.Group()
+                        
+                        # El mánager de hordas lee tu matriz de bifurcaciones del LevelManager
+                        administrador_oleadas = WaveManager(camino=camino_activo)
+                        administrador_oleadas.tiempo_inicio_descanso = tiempo_actual
+                        
+                        interfaz_grafica = UIManager()
+                        dinero_patria = cte.DINERO_INICIAL
+                        estado_actual = cte.ESTADO_JUEGO_ACTIVO
 
             # Clics Adentro de la Partida Activa
             # --- CAPTURA DE EVENTOS DE COMBATE (CORREGIDO ARRIBA EN EL FOR EVENT) ---
             elif estado_actual == cte.ESTADO_JUEGO_ACTIVO:
-                if event.type == pygame.MOUSEBUTTONDOWN:
+                
+                # A. CAPTURA DE TECLADO PARA DIAGNÓSTICO (NUEVO)
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_p:
+                        # Invertimos el estado de la pausa al presionar la letra 'P'
+                        juego_en_pausa_debug = not juego_en_pausa_debug
+                        if juego_en_pausa_debug:
+                            print("\n[ DEBUG ] === PARTIDA PAUSADA === Clickear en la calle para obtener Waypoints.")
+                        else:
+                            print("[ DEBUG ] === PARTIDA REANUDADA ===\n")
+                
+                # B. CAPTURA DE PÍXELES EN PAUSA
+                if juego_en_pausa_debug and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    # Capturamos la coordenada exacta del mouse bajo tu cursor
+                    coord_x, coord_y = event.pos
+                    puntos_capturados_test.append((coord_x, coord_y))
                     
-                    # 1. Clic Izquierdo (Botón 1): Construcción Inteligente de Torres Patrias
+                    # Imprime el punto listo con formato de tupla para que lo copies directo a tu lista
+                    print(f"({coord_x}, {coord_y}),  # Waypoint {len(puntos_capturados_test)}")
+                    continue # Salteamos la lógica de construcción común para que no gaste dinero al probar
+                
+                if not juego_en_pausa_debug and event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
                         parcela_seleccionada = None
                         
@@ -578,60 +594,54 @@ def main():
                 administrador_sonidos.actualizar_volumen_fx(porcentaje_nuevo)
             
         elif estado_actual == cte.ESTADO_JUEGO_ACTIVO:
-            # 1. CENTRALIZADOR DE DERROTA INDUSTRIAL (Evita pisadas de variables y limpia el buffer)
+            # 1. CENTRALIZADOR DE DERROTA INDUSTRIAL (MANTENIDO ARRIBA Y POR FUERA)
             if cabildo.vidas <= 0:
-                # Apagamos March Of The Micmacs de la memoria RAM
                 administrador_sonidos.detener_musica() 
-
-                # GATILLAMOS TU EFECTO DE DERROTA (NUEVO)
                 administrador_sonidos.play_gameover()
-
                 print("\n========================================================")
                 print(" ¡EL CABILDO HA CAÍDO! Las hordas realistas tomaron la plaza.")
                 print("========================================================\n")
                 estado_actual = cte.ESTADO_GAME_OVER
                 continue  
 
-            # === CORRECCIÓN DEFINITIVA CONTRA EL SILENCIO ===
-            # ¡BORRAMOS COMPLETAMENTE LA LÍNEA DE 'administrador_sonidos.detener_musica()' DE ACÁ!
-            # (Ya no se necesita porque apagamos la música del menú en el instante del clic en la postal)
+            # ========================================================
+            # ENVOLTORIO DEL MODO DESARROLLADOR (PAUSA DEBUG)
+            # ========================================================
+            # Si la tecla 'P' NO fue presionada, corre la simulación de guerra con total normalidad
+            if not juego_en_pausa_debug:
 
-            # 3. ACTUALIZACIÓN DE ENTIDADES CONTINUA (SINCRO TOTAL CON TU CLASE TORRE)
-            grupo_enemigos.update()
-            grupo_torres.update(grupo_enemigos, grupo_proyectiles, tiempo_actual)  
-            grupo_proyectiles.update(grupo_enemigos)
-            grupo_aliados_moviles.update(grupo_enemigos, tiempo_actual)
-            grupo_ingenieros.update(grupo_enemigos)
-            cabildo.update(grupo_enemigos, tiempo_actual)
-            grupo_textos_flotantes.update() 
+                # 3. ACTUALIZACIÓN DE ENTIDADES CONTINUA 
+                grupo_enemigos.update()
+                grupo_torres.update(grupo_enemigos, grupo_proyectiles, tiempo_actual)  
+                grupo_proyectiles.update(grupo_enemigos)
+                grupo_aliados_moviles.update(grupo_enemigos, tiempo_actual)
+                grupo_ingenieros.update(grupo_enemigos)
+                cabildo.update(grupo_enemigos, tiempo_actual)
+                grupo_textos_flotantes.update() 
+                
+                # Sincronización con tu mánager de hordas original del main
+                administrador_oleadas.update(tiempo_actual, grupo_enemigos, cabildo)
 
-            # 4. PROCESADOR DE IMPACTOS, RECOMPENSAS Y ANIMACIONES DE MUERTE
-            # REMOVEMOS el segundo 'enemigo.update()' de acá adentro para que no vayan rápido
-            for enemigo in list(grupo_enemigos):
-                # Caso A: El invasor esquivó tus defensas y vulneró el Cabildo
-                if enemigo.ha_llegado_al_final:
-                    cabildo.recibir_danio(enemigo.danio, grupo_enemigos)
-                    enemigo.kill() 
-                    continue
+                # 4. PROCESADOR DE IMPACTOS, RECOMPENSAS Y ANIMACIONES DE MUERTE
+                for enemigo in list(grupo_enemigos):
+                    # Caso A: El invasor esquivó tus defensas y vulneró el Cabildo
+                    if enemigo.ha_llegado_al_final:
+                        cabildo.recibir_danio(enemigo.danio, grupo_enemigos)
+                        enemigo.kill() 
+                        continue
 
-                # Caso B: El enemigo fue alcanzado por las torres o por el Grito de la Patria
-                # Validamos si se quedó sin salud (vida <= 0) pero todavía camina de forma normal
-                elif enemigo.vida <= 0 and not getattr(enemigo, "ya_pago_recompensa", False):
-                    # 1. Le pagamos la plata de la corona española de forma inmediata al HUD
-                    dinero_patria += enemigo.recompensa
-                    
-                    # 2. Le clavamos el cerrojo para cobrar una sola vez y no duplicar fondos
-                    enemigo.ya_pago_recompensa = True
-                    
-                    # 3. Activamos su bandera nativa para congelar sus vectores y que empiece a caer
-                    enemigo.esta_muerto = True
-                    enemigo.frame_actual = 0
-                    enemigo.ultimo_refresco = pygame.time.get_ticks()
+                    # Caso B: El enemigo fue alcanzado por las torres o por el Grito de la Patria
+                    elif enemigo.vida <= 0 and not getattr(enemigo, "ya_pago_recompensa", False):
+                        dinero_patria += enemigo.recompensa
+                        enemigo.ya_pago_recompensa = True
+                        
+                        enemigo.esta_muerto = True
+                        enemigo.frame_actual = 0
+                        enemigo.ultimo_refresco = pygame.time.get_ticks()
 
-                # Caso C: El soldado ya cobró y está pasando por sus cuadros de desvanecimiento
-                # Dejamos que corra libre su render en pantalla sin interferir con su caminata
-                elif getattr(enemigo, "esta_muerto", False):
-                    pass
+                    # Caso C: El soldado ya cobró y está pasando por sus cuadros de desvanecimiento
+                    elif getattr(enemigo, "esta_muerto", False):
+                        pass
 
             # ========================================================
             # ORQUESTADOR DE CUENTA REGRESIVA DE OLEADAS 
@@ -657,7 +667,7 @@ def main():
                     # Rango B: Alerta Crítica de invasión inminente (De 3 a 1 segundos inclusive)
                     elif 0 < segundos_restantes <= 3:
                         administrador_sonidos.play_lowcountdown()
-                        print(f"[ RELOJ PATRIO ] ¡EMERGENCIA! Quedan {segundos_restantes}s... ¡Realistas a la vista!")
+                        print(f"[ RELOJ PATRIO ] Quedan {segundos_restantes}s... ¡Realistas a la vista!")
                     elif segundos_restantes <= 0:
                         print(f"[ RELOJ PATRIO ] ¡Realistas entran al ataque!")
             else:

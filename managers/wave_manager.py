@@ -71,19 +71,24 @@ class WaveManager:
         # 2. Modo Asalto: Comienza la salida en fila de las tropas españolas
         if self.enemigos_pendientes:
             if tiempo_actual - self.ultimo_spawn > self.frecuencia_spawn:
-                # Extraemos el próximo de la ruleta
                 tipo_proximo = self.enemigos_pendientes.pop(0)
                 
-                # Instanciamos el objeto con tu motor nativo
-                nuevo_soldado = Enemigo(camino=self.camino, tipo=tipo_proximo)
+                # === MECÁNICA DE BIFURCACIÓN ALEATORIA (NUEVO) ===
+                # Evaluamos si pasamos una matriz de caminos múltiples (Lista de listas)
+                if isinstance(self.camino[0], list):
+                    import random
+                    # El soldado elige de forma independiente una de las dos rutas del muelle
+                    camino_elegido = random.choice(self.camino)
+                else:
+                    # Si jugás el nivel 1 común, usa el vector rígido único del Cabildo
+                    camino_elegido = self.camino
+                
+                # Instanciamos el enemigo pasándole la ruta sorteada al azar
+                nuevo_soldado = Enemigo(camino=camino_elegido, tipo=tipo_proximo)
                 grupo_enemigos.add(nuevo_soldado)
                 
-                # === MARGEN DE ESPAUNEO DINÁMICO (NUEVO JITTER) ===
-                # Cada vez que nace un enemigo, calculamos un tiempo de espera aleatorio para el próximo.
-                # Rango: de 600ms (salen casi juntos pegados) a 2600ms (salen distanciados y separados)
                 import random
                 self.frecuencia_spawn = random.randint(600, 2600)
-                
                 self.ultimo_spawn = tiempo_actual
         else:
             # === DETECTOR DE FIN DE OLEADA BLINDADO INDUSTRIAL (CORREGIDO) ===

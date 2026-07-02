@@ -60,6 +60,10 @@ class Enemigo(pygame.sprite.Sprite):
             # Tu soldado raso usa 8, pero el artillerorun tiene 5 cuadros (del 1 al 5).
             rango_run = 6 if self.tipo == "artillero" else 9
             self.anim_correr = [pygame.image.load(f"{ruta_base}{pfx}run{i}.png").convert_alpha() for i in range(1, rango_run)]
+
+            # === NUEVA INYECCIÓN: CAMINATA HACIA ABAJO (DOWN) ===
+            # Ambos personajes tienen exactamente 4 cuadros (del 1 al 4)
+            self.anim_abajo = [pygame.image.load(f"{ruta_base}{pfx}down{i}.png").convert_alpha() for i in range(1, 5)]
             
             # 4. Ataques (Por las dudas mapeamos los de tu soldado)
             if self.tipo == "artillero":
@@ -126,15 +130,20 @@ class Enemigo(pygame.sprite.Sprite):
             
             if distancia > self.velocidad:
                 # Determinamos la orientación de la animación en los ejes
-                if abs(dy) > abs(dx) and dy < 0:
-                    self.animacion_actual = self.anim_arriba
-                    self.espejar_horizontal = False
+                if abs(dy) > abs(dx):
+                    if dy < 0:
+                        self.animacion_actual = self.anim_arriba
+                        self.espejar_horizontal = False
+                    else:
+                        # NUEVO: Si dy es positivo, el enemigo está bajando por el mapa
+                        self.animacion_actual = self.anim_abajo
+                        self.espejar_horizontal = False
                 else:
                     self.animacion_actual = self.anim_correr
                     if dx < 0:
-                        self.espejar_horizontal = True  # Fila roja (Mirando a la IZQUIERDA)
+                        self.espejar_horizontal = True  
                     else:
-                        self.espejar_horizontal = False # Puerto o calle alta (Mirando a la DERECHA)
+                        self.espejar_horizontal = False 
                 
                 # Avanzamos la posición en base al vector unitario
                 self.pos_x += (dx / distancia) * self.velocidad
