@@ -9,46 +9,82 @@ class Enemigo(pygame.sprite.Sprite):
         self.tipo = tipo
         self.revelado = True
         
-        # Estadísticas del GDD
-        self.vida = 15
-        self.velocidad = 1.5
-        self.recompensa = 10
-        self.danio = 1
+        # ========================================================
+        # DICCIONARIO INDUSTRIAL DE BALANCE DE TROPAS 
+        # ========================================================
+        # Centralizamos las estadísticas del GDD y los nombres de las carpetas
+        balance_unidades = {
+            "soldado_raso": {
+                "vida": 15,
+                "velocidad": 1.5,
+                "recompensa": 10,
+                "danio": 1,
+                "ruta_base": "assets/enemigos/soldado/",
+                "prefijo": "soldado"
+            },
+            "artillero": {
+                "vida": 40,            
+                "velocidad": 1.6,      
+                "recompensa": 35,      
+                "danio": 5,            
+                "ruta_base": "assets/enemigos/artillero/", 
+                "prefijo": "artillero"
+            }
+        }
         
-        # Ruta base hacia la nueva carpeta de tus sprites sueltos
-        ruta_base = "assets/enemigos/soldado/"
+        # Buscamos la configuración activa. Si no existe, usa el soldado común
+        cfg = balance_unidades.get(self.tipo, balance_unidades["soldado_raso"])
         
-        # --- CARGA ULTRA SEGURA DE IMÁGENES SEPARADAS ---
+        # Seteamos de forma dinámica TUS variables del GDD originales
+        self.vida = cfg["vida"]
+        self.velocidad = cfg["velocidad"]
+        self.recompensa = cfg["recompensa"]
+        self.danio = cfg["danio"]
+        
+        # Ruta dinámica hacia la carpeta del sprite correspondiente
+        ruta_base = cfg["ruta_base"]
+        pfx = cfg["prefijo"]
+        # ========================================================
+        
+        # --- CARGA ULTRA SEGURA DE IMÁGENES SEPARADAS (ADAPTADA) ---
         try:
             # 1. Animación Quietito (Stance) - 4 cuadros
-            self.anim_quieto = [pygame.image.load(f"{ruta_base}soldadostance{i}.png").convert_alpha() for i in range(1, 5)]
+            self.anim_quieto = [pygame.image.load(f"{ruta_base}{pfx}stance{i}.png").convert_alpha() for i in range(1, 5)]
             
-            # 2. Animación Caminar hacia arriba (Up) - 8 cuadros
-            self.anim_arriba = [pygame.image.load(f"{ruta_base}soldadoup{i}.png").convert_alpha() for i in range(1, 9)]
+            # 2. Animación Caminar hacia arriba (Up) - 8 y 9 cuadros de forma dinámica
+            # El soldado raso usa 8, pero tu artillero tiene 9 cuadros (del 1 al 9). Usamos len o rangos elásticos.
+            rango_up = 10 if self.tipo == "artillero" else 9
+            self.anim_arriba = [pygame.image.load(f"{ruta_base}{pfx}up{i}.png").convert_alpha() for i in range(1, rango_up)]
             
-            # 3. Animación Caminar de costado (Run) - 8 cuadros (Se usa para derecha e izquierda)
-            self.anim_correr = [pygame.image.load(f"{ruta_base}soldadorun{i}.png").convert_alpha() for i in range(1, 9)]
+            # 3. Animación Caminar de costado (Run) - 8 y 5 cuadros de forma dinámica
+            # Tu soldado raso usa 8, pero el artillerorun tiene 5 cuadros (del 1 al 5).
+            rango_run = 6 if self.tipo == "artillero" else 9
+            self.anim_correr = [pygame.image.load(f"{ruta_base}{pfx}run{i}.png").convert_alpha() for i in range(1, rango_run)]
             
-            # 4. Ataques - 5 y 6 cuadros
-            self.anim_ataque1 = [pygame.image.load(f"{ruta_base}soldado1ataque{i}.png").convert_alpha() for i in range(1, 6)]
-            self.anim_ataque2 = [pygame.image.load(f"{ruta_base}soldado2ataque{i}.png").convert_alpha() for i in range(1, 7)]
+            # 4. Ataques (Por las dudas mapeamos los de tu soldado)
+            if self.tipo == "artillero":
+                # Como el artillero no los usa todavía, le ponemos una copia del run de auxilio técnico
+                self.anim_ataque1 = self.anim_correr
+                self.anim_ataque2 = self.anim_correr
+            else:
+                self.anim_ataque1 = [pygame.image.load(f"{ruta_base}{pfx}1ataque{i}.png").convert_alpha() for i in range(1, 6)]
+                self.anim_ataque2 = [pygame.image.load(f"{ruta_base}{pfx}2ataque{i}.png").convert_alpha() for i in range(1, 7)]
             
-            # 5. Muerte (Death) - 6 cuadros
-            self.anim_muerte = [pygame.image.load(f"{ruta_base}soldadodeath{i}.png").convert_alpha() for i in range(1, 7)]
+            # 5. Muerte (Death) - 6 cuadros (Ambos soldados usan 6 fotogramas exactos)
+            self.anim_muerte = [pygame.image.load(f"{ruta_base}{pfx}death{i}.png").convert_alpha() for i in range(1, 7)]
             
         except Exception as e:
-            print(f"Aviso de carga en sprites sueltos: {e}")
-            # Bloque de auxilio gráfico por si te falta pasar o renombrar alguna foto
+            print(f"Aviso de carga en sprites de {self.tipo}: {e}")
             aux = pygame.Surface((32, 32), pygame.SRCALPHA)
-            pygame.draw.circle(aux, (220, 20, 60), (16, 16), 14)
+            pygame.draw.circle(aux, (220, 20, 60) if self.tipo == "soldado_raso" else (215, 120, 0), (16, 16), 14)
             self.anim_quieto = self.anim_arriba = self.anim_correr = self.anim_ataque1 = self.anim_ataque2 = self.anim_muerte = [aux]
 
         # Estado inicial del motor de animación
         self.animacion_actual = self.anim_correr
         self.frame_actual = 0
         self.ultimo_refresco = pygame.time.get_ticks()
-        self.velocidad_animacion = 100  # Milisegundos por fotograma
-        self.espejar_horizontal = False # Control para el giro a la izquierda
+        self.velocidad_animacion = 100  
+        self.espejar_horizontal = False 
         
         # Sprite activo en pantalla
         self.image = self.animacion_actual[self.frame_actual]
@@ -62,6 +98,11 @@ class Enemigo(pygame.sprite.Sprite):
         self.ha_llegado_al_final = False
         self.esta_muerto = False
 
+        self.tiempo_ultimo_golpe = 0
+        
+        # --- VARIABLES PARA EL EFECTO FADE-OUT (DESVANECIMIENTO) ---
+        self.opacidad_muerte = 255     
+        self.reducir_opacidad = False   
         self.tiempo_ultimo_golpe = 0
         
         # --- VARIABLES PARA EL EFECTO FADE-OUT (DESVANECIMIENTO) ---
@@ -111,12 +152,33 @@ class Enemigo(pygame.sprite.Sprite):
             self.frame_actual = (self.frame_actual + 1) % len(self.animacion_actual)
             self.ultimo_refresco = tiempo_actual
 
-        # Asignamos el cuadro base segun corresponda el frame
+        # ========================================================
+        # CANDADO DE SEGURIDAD CONTRA INDEXERROR (NUEVO)
+        # ========================================================
+        # Si el frame actual quedó desfasado por un cambio de calle o de tropa, lo reiniciamos a 0 para evitar que desborde el tamaño de la lista activa
+        if self.frame_actual >= len(self.animacion_actual):
+            self.frame_actual = 0
+
+        # Asignamos el cuadro base de forma 100% segura contra desbordes
         cuadro_base = self.animacion_actual[self.frame_actual]
         if self.espejar_horizontal:
             self.image = pygame.transform.flip(cuadro_base, True, False)
         else:
             self.image = cuadro_base.copy()
+
+        # ========================================================
+        # AJUSTE DE OFFSETS VISUALES PARA EL ARTILLERO (NUEVO)
+        # ========================================================
+        # Si el personaje activo es el artillero pesado y está caminando hacia arriba
+        if self.tipo == "artillero" and self.animacion_actual == self.anim_arriba:
+            # Desplazamos su rectángulo invisible 12 píxeles hacia la izquierda en pantalla.
+            # (Si notás que todavía le falta un poquito, subí este número a 16 o 18 a ojo)
+            self.rect.centerx = int(self.pos_x) - 12
+        else:
+            # En cualquier otra animación o soldado, se respeta la posición flotante matemática exacta
+            self.rect.centerx = int(self.pos_x)
+            
+        self.rect.centery = int(self.pos_y)
 
         # --- MOTOR DEL TINTE ROJO TRANSPARENTE EN CALIENTE ---
         if not self.esta_muerto and (tiempo_actual - self.tiempo_ultimo_golpe < 150):
@@ -184,3 +246,29 @@ class Enemigo(pygame.sprite.Sprite):
                 superficie_alfa = pygame.Surface(self.image.get_size(), pygame.SRCALPHA)
                 superficie_alfa.fill((255, 255, 255, self.opacidad_muerte))
                 self.image.blit(superficie_alfa, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+
+    def cargar_sprites_unidad(self, config):
+        """Busca y levanta secuencialmente las imágenes pixel art de la carpeta."""
+        try:
+            # Caminata Regular (artillerorun (1).png al 5)
+            for i in range(1, config["anim_run"] + 1):
+                img = pygame.image.load(f"assets/enemigos/{self.prefijo}run ({i}).png").convert_alpha()
+                self.animaciones["run"].append(img)
+                
+            # Caminata hacia Arriba (artilleroup (1).png al 9)
+            for i in range(1, config["anim_up"] + 1):
+                img = pygame.image.load(f"assets/enemigos/{self.prefijo}up ({i}).png").convert_alpha()
+                self.animaciones["up"].append(img)
+                
+            # Animación de Caída/Muerte (artillerodeath (1).png al 6)
+            for i in range(1, config["anim_death"] + 1):
+                img = pygame.image.load(f"assets/enemigos/{self.prefijo}death ({i}).png").convert_alpha()
+                self.animaciones["death"].append(img)
+        except Exception as e:
+            print(f"Aviso de texturas para {self.tipo}: Usando bloques de auxilio. Motivo: {e}")
+            # Auxilio visual por si falta acomodar alguna carpeta en el disco
+            vacio = pygame.Surface((32, 48), pygame.SRCALPHA)
+            pygame.draw.rect(vacio, (200, 0, 0), (0, 0, 32, 48))
+            self.animaciones["run"] = [vacio] * config["anim_run"]
+            self.animaciones["up"] = [vacio] * config["anim_up"]
+            self.animaciones["death"] = [vacio] * config["anim_death"]

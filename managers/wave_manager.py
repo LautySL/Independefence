@@ -21,30 +21,43 @@ class WaveManager:
         self.preparar_oleada()
 
     def preparar_oleada(self):
-        """Define la composicion exacta del ejercito real segun la ronda (Seccion 1.14 del GDD)."""
+        """Define la composicion del ejercito usando ruleta de probabilidades (Seccion GDD)."""
         self.enemigos_pendientes = []
         self.en_descanso = True
         self.tiempo_inicio_descanso = pygame.time.get_ticks()
         
-        # Configuramos la dificultad escalable de forma matematica
+        # 1. PARAMETRIZACIÓN DE HORDAS SEGÚN DISEÑO DINÁMICO
         if self.oleada_actual == 1:
-            # 5 soldados rasos comunes
-            self.enemigos_pendientes = ["soldado_raso"] * 5
-            self.frecuencia_spawn = 2500
+            cantidad_total = 10
+            opciones = ["soldado_raso", "artillero"]
+            probabilidades = [0.95, 0.05] # 95% Chance Soldado | 5% Chance Artillero
+            
         elif self.oleada_actual == 2:
-            # 6 rasos y se suman 2 jinetes rapidos
-            self.enemigos_pendientes = ["soldado_raso"] * 6 + ["soldado_a_caballo"] * 2
-            self.frecuencia_spawn = 2000
+            cantidad_total = 15
+            opciones = ["soldado_raso", "artillero"]
+            probabilidades = [0.70, 0.30] # 70% Chance Soldado | 30% Chance Artillero
+            
         elif self.oleada_actual == 3:
-            # Introduccion de los cañoneros pesados y un espia saboteador
-            self.enemigos_pendientes = ["soldado_raso"] * 4 + ["canoneros"] * 2 + ["espia_realista"]
-            self.frecuencia_spawn = 1800
+            cantidad_total = 30
+            opciones = ["soldado_raso", "artillero"]
+            probabilidades = [0.60, 0.40] # 60% Chance Soldado | 40% Chance Artillero
+            
         else:
-            # Oleadas infinitas posteriores avanzadas con multiplicadores escalables
-            cantidad_basicos = 5 + self.oleada_actual
-            cantidad_pesados = self.oleada_actual // 2
-            self.enemigos_pendientes = ["soldado_experimentado"] * cantidad_basicos + ["canoneros"] * cantidad_pesados
-            self.frecuencia_spawn = max(1000, 2000 - (self.oleada_actual * 100))
+            # Modo infinito de auxilio posterior
+            cantidad_total = 30 + (self.oleada_actual * 2)
+            opciones = ["soldado_raso", "artillero"]
+            probabilidades = [0.50, 0.50]
+
+        # 2. DISPARO DE LA RULETA DE PYTHON
+        # random.choices genera una lista completa eligiendo elementos al azar basados en los pesos
+        import random
+        self.enemigos_pendientes = random.choices(opciones, weights=probabilidades, k=cantidad_total)
+        
+        # Seteamos un tiempo de spawn inicial para el primer soldado de la fila
+        self.frecuencia_spawn = random.randint(1500, 2500)
+        
+        # Imprime la fila militar real resultante en la terminal de Sublime Text para auditar las chances
+        print(f"[ WaveManager ] Horda {self.oleada_actual} armada al azar. Fila militar real: {self.enemigos_pendientes}")
 
     def update(self, tiempo_actual, grupo_enemigos, cabildo=None):
         """Monitorea el reloj global para instanciar los sprites en la ruta de campaña."""
@@ -58,19 +71,27 @@ class WaveManager:
         # 2. Modo Asalto: Comienza la salida en fila de las tropas españolas
         if self.enemigos_pendientes:
             if tiempo_actual - self.ultimo_spawn > self.frecuencia_spawn:
-                # Extraemos el primer enemigo de la fila
+                # Extraemos el próximo de la ruleta
                 tipo_proximo = self.enemigos_pendientes.pop(0)
                 
-                # Instanciamos el objeto con el waypoint del mapa
+                # Instanciamos el objeto con tu motor nativo
                 nuevo_soldado = Enemigo(camino=self.camino, tipo=tipo_proximo)
                 grupo_enemigos.add(nuevo_soldado)
                 
+                # === MARGEN DE ESPAUNEO DINÁMICO (NUEVO JITTER) ===
+                # Cada vez que nace un enemigo, calculamos un tiempo de espera aleatorio para el próximo.
+                # Rango: de 600ms (salen casi juntos pegados) a 2600ms (salen distanciados y separados)
+                import random
+                self.frecuencia_spawn = random.randint(600, 2600)
+                
                 self.ultimo_spawn = tiempo_actual
         else:
-            # --- DETECTOR DE FIN DE OLEADA BLINDADO ---
-            if len(grupo_enemigos) == 0:
+            # === DETECTOR DE FIN DE OLEADA BLINDADO INDUSTRIAL (CORREGIDO) ===
+            # El juego SOLO avanza de horda o da la victoria si la pantalla está vacía (len == 0)
+            # Y ADEMÁS la lista de espera de la ticketera militar está totalmente vacía de forma legal.
+            if len(grupo_enemigos) == 0 and not self.enemigos_pendientes:
                 
-                # --- REPORTES EN CONSOLA SEGÚN EL DESEMPEÑO DEL GDD ---
+                # --- REPORTES EN CONSOLA SEGÚN EL DESEMPEÑO DEL GDD (Lo que ya tenías) ---
                 if cabildo:
                     vidas_max = getattr(cabildo, "vidas_maximas", 20)
                     if cabildo.vidas < vidas_max:
@@ -82,24 +103,17 @@ class WaveManager:
                     print(f"¡Horda {self.oleada_actual} completada con éxito!")
 
                 # --- EL CERROJO DEFINITIVO DE LA CAMPAÑA ---
-                # Evaluamos el número de horda ANTES de sumarle, para frenar el bucle en la horda 3
                 if self.oleada_actual == 3:
                     print("¡VICTORIA REVOLUCIONARIA DEFINITIVA! Derrotaste la campana del Cabildo.")
-                    # Pasamos a 4 en completo silencio para que tu main.py salte a la pantalla de pergaminos
                     self.oleada_actual = 4 
                     self.enemigos_pendientes = []
                 else:
-                    # Si era la horda 1 o la 2, avisamos en consola la que se está preparando
                     print(f"Preparando oleada numero: {self.oleada_actual + 1}")
                     self.oleada_actual += 1
                     
-                    # --- NUEVA INYECCIÓN DE TROPAS PARA LAS SIGUIENTES HORDAS ---
-                    if self.oleada_actual == 2:
-                        self.enemigos_pendientes = ["soldado_raso"] * 8 + ["soldado_experimentado"] * 3
-                    elif self.oleada_actual == 3:
-                        self.enemigos_pendientes = ["soldado_raso"] * 10 + ["soldado_experimentado"] * 5 + ["general"] * 1
+                    # Llamamos a tu método dinámico de carga para preparar la siguiente ronda
+                    self.preparar_oleada()
                     
-                    # Activamos el descanso ÚNICAMENTE para las hordas intermedias reales
                     self.en_descanso = True
                     self.tiempo_inicio_descanso = tiempo_actual
                     self.ultimo_spawn = tiempo_actual
