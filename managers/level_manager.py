@@ -94,3 +94,18 @@ class LevelManager:
             
         # Por si hay más niveles en el futuro
         return []
+
+    # es obvio lo que esta función hace
+    def obtener_posicion_barra_vida(self, numero_nivel):
+        """Devuelve las coordenadas (X, Y) superiores para dibujar la barra de salud de la base."""
+        # ESCENARIO 1: El Cabildo tradicional 
+        if numero_nivel == 1:
+            return (512, 70) # (Ajustala al valor que tenías si era diferente)
+            
+        # === ESCENARIO 2: LA CATEDRAL METROPOLITANA ===
+        elif numero_nivel == 2:
+            # Calibración milimétrica para la Catedral:
+            return (477, 70)
+            
+        # Auxilio por si sumás más niveles en el futuro
+        return (512, 140)

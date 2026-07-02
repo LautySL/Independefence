@@ -15,7 +15,7 @@ class UIManager:
             print(f"Aviso: No se pudo cargar Moneda.png: {e}")
             self.icono_moneda = None
 
-    def draw_hud(self, pantalla, dinero, oleada, cabildo, wave_manager, tiempo_actual):
+    def draw_hud(self, pantalla, dinero, oleada, cabildo, wave_manager, tiempo_actual, pos_barra):
         """Renderiza todo el entorno de datos e interfaces sobre el mapa de juego."""
         
         # ========================================================
@@ -60,19 +60,23 @@ class UIManager:
                 pantalla.blit(surf_borde, (rect_alerta.x + dx, rect_alerta.y + dy))
             pantalla.blit(surf_frente, rect_alerta)
 
-        # 4. Barra de Resistencia del Cabildo
-        self.dibujar_barra_salud(pantalla, cabildo)
+        # 4. Barra de Resistencia del Cabildo (Le pasamos la coordenada viva al constructor de abajo)
+        self.dibujar_barra_salud(pantalla, cabildo, pos_barra)
 
-        # 5. Glosario de comandos inferior
+        # 5. Glosario de comandos inferior (Lo que ya tenías)
         self.dibujar_glosario_ayuda(pantalla)
 
-    def dibujar_barra_salud(self, pantalla, cabildo):
-        """Genera una barra de vida arriba de la base que vira de verde a rojo."""
+    def dibujar_barra_salud(self, pantalla, cabildo, pos_barra):
+        """Genera una barra de vida arriba de la base que vira de verde a rojo según su posición."""
         ancho_total = 140
         alto = 10
-        x = 512 - (ancho_total // 2)
-        # CORRECCIÓN: Subimos la barra de Y=115 a Y=85 para ubicarla arriba de la torre del reloj
-        y = 70 
+        
+        # Desempaquetamos la coordenada calculada de forma elegante por el LevelManager
+        bx, by = pos_barra
+        
+        # Centramos el ancho de la barra usando el eje X variable, y calcamos la altura en el eje Y variable
+        x = bx - (ancho_total // 2)
+        y = by 
 
         vidas_max = getattr(cabildo, "vidas_maximas", 20)
         porcentaje = max(0.0, min(1.0, cabildo.vidas / vidas_max))

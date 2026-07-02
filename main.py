@@ -111,6 +111,9 @@ def main():
     arrastrando_musica = False
     arrastrando_fx = False
 
+    parcelas_validas = [] 
+    pos_barra_vida_activa = (512, 140)
+
     # === VARIABLES EXCLUSIVAS DEL MODO DEBUG: ESTO NOSE TOCA ===
     juego_en_pausa_debug = False # Se Activa/desactiva la pausa con la tecla P
     puntos_capturados_test = [] 
@@ -234,7 +237,8 @@ def main():
                         # Le pedimos al mánager de forma elegante las estructuras de este mapa
                         camino_activo = administrador_niveles.obtener_camino_nivel(nivel_activo)
                         parcelas_validas = administrador_niveles.obtener_parcelas_nivel(nivel_activo)
-                        
+                        pos_barra_vida_activa = administrador_niveles.obtener_posicion_barra_vida(nivel_activo)
+
                         cabildo = Base(vidas=20)
                         cabildo.nombre = "Cabildo de Buenos Aires"
                         cabildo.rect.center = (512, 175)
@@ -263,6 +267,7 @@ def main():
                         # === SINCRO AUTOMÁTICA DE LA CATEDRAL (MUDADO AL MANAGER) ===
                         camino_activo = administrador_niveles.obtener_camino_nivel(nivel_activo)
                         parcelas_validas = administrador_niveles.obtener_parcelas_nivel(nivel_activo)
+                        pos_barra_vida_activa = administrador_niveles.obtener_posicion_barra_vida(nivel_activo)
                         
                         cabildo = Base(vidas=20)
                         cabildo.nombre = "Catedral de Buenos Aires"
@@ -594,6 +599,18 @@ def main():
                 administrador_sonidos.actualizar_volumen_fx(porcentaje_nuevo)
             
         elif estado_actual == cte.ESTADO_JUEGO_ACTIVO:
+
+            bx, by = pos_barra_vida_activa
+            
+            # Calculamos el ancho verde proporcional a la salud actual del cabildo/catedral
+            ancho_barra = 160 # Largo total de la barra en píxeles
+            ancho_verde = int((cabildo.vidas / cabildo.vidas_maximas) * ancho_barra)
+            
+            # 1. Dibujamos el fondo de la barra (Rectángulo negro de contorno)
+            pygame.draw.rect(pantalla, (0, 0, 0), (bx - (ancho_barra // 2), by, ancho_barra, 14))
+            # 2. Dibujamos la barra de salud (Rectángulo verde interno)
+            pygame.draw.rect(pantalla, (0, 255, 0), (bx - (ancho_barra // 2) + 2, by + 2, ancho_verde - 4, 10))
+
             # 1. CENTRALIZADOR DE DERROTA INDUSTRIAL (MANTENIDO ARRIBA Y POR FUERA)
             if cabildo.vidas <= 0:
                 administrador_sonidos.detener_musica() 
@@ -707,7 +724,7 @@ def main():
             grupo_textos_flotantes.draw(pantalla) 
 
             # Capa Interfaz: El HUD va arriba de todo para que no lo tapen los personajes
-            interfaz_grafica.draw_hud(pantalla, dinero_patria, administrador_oleadas.oleada_actual, cabildo, administrador_oleadas, tiempo_actual)
+            interfaz_grafica.draw_hud(pantalla, dinero_patria, administrador_oleadas.oleada_actual, cabildo, administrador_oleadas, tiempo_actual, pos_barra_vida_activa)
 
         pygame.display.update()
         pygame.display.flip()

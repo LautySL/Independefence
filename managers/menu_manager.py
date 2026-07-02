@@ -299,9 +299,9 @@ class MenuManager:
         
             self.blit_con_contorno(
                 pantalla, 
-                "Catedra de Diseno y Desarrollo de Videojuegos 2026", 
+                "Tecnicatura en Desarrollo de Videojuegos 2026", 
                 f_desc, 
-                (235, 235, 235), # Un blanco sutilmente grisaceo muy prolijo para el subtitulo
+                (235, 235, 235), # Un blanco grisaceo 
                 (512, 410), 
                 es_centro=True
             )
