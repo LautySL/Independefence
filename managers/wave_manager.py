@@ -58,15 +58,19 @@ class WaveManager:
 
     def update(self, tiempo_actual, grupo_enemigos, cabildo=None):
         """Monitorea el reloj global para instanciar los sprites en la ruta de campaña."""
-        # CANDADO INDUSTRIAL DE FRONTERA: Si la campaña ya fue ganada, apagamos el mánager por completo
         if self.juego_terminado:
             return
 
-        # 1. Modo Descanso
+        # 1. Modo Descanso: El jugador recolecta o planea sus defensas
         if self.en_descanso:
             if tiempo_actual - self.tiempo_inicio_descanso > self.duracion_descanso:
                 self.en_descanso = False
                 self.ultimo_spawn = tiempo_actual
+                
+                # === REGISTRO REGIMENTARIO DE ASALTO (NUEVO) ===
+                # Guardamos una sola vez el milisegundo exacto en el que se rompe la tregua
+                self.tiempo_exacto_inicio_asalto = tiempo_actual
+                
             return
 
         # 2. Modo Asalto: Comienza la salida en fila de las tropas españolas

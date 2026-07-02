@@ -6,6 +6,7 @@ print("Cargando Clases...")
 from config import constants as cte
 from clases.base import Base
 from clases.torre import Torre
+from clases.barco import BarcoInvasor
 from clases.texto_flotante import TextoFlotante
 print("Cargando Managers...")
 from managers.wave_manager import WaveManager
@@ -248,6 +249,7 @@ def main():
                         grupo_ingenieros = pygame.sprite.Group()
                         grupo_proyectiles = pygame.sprite.Group()
                         grupo_aliados_moviles = pygame.sprite.Group()
+                        grupo_barco_sistema = pygame.sprite.Group()
                         
                         # Pasamos la ruta limpia al mánager de hordas
                         administrador_oleadas = WaveManager(camino=camino_activo)
@@ -278,6 +280,7 @@ def main():
                         grupo_ingenieros = pygame.sprite.Group()
                         grupo_proyectiles = pygame.sprite.Group()
                         grupo_aliados_moviles = pygame.sprite.Group()
+                        grupo_barco_sistema = pygame.sprite.Group()
                         
                         # El mánager de hordas lee tu matriz de bifurcaciones del LevelManager
                         administrador_oleadas = WaveManager(camino=camino_activo)
@@ -619,7 +622,20 @@ def main():
                 print(" ¡EL CABILDO HA CAÍDO! Las hordas realistas tomaron la plaza.")
                 print("========================================================\n")
                 estado_actual = cte.ESTADO_GAME_OVER
-                continue  
+                continue
+
+            # === ORQUESTADOR CINEMÁTICO: DESEMBARCO ESPAÑOL ===
+            # Cambiamos la condición: el barco ahora NACE EN EL SEGUNDO UNO DEL DESCANSO.
+            # Esto le da los 7 segundos que necesita para viajar despacio por el agua,
+            # logrando encallar en el muelle en el segundo 3, ANTES de que salgan los enemigos.
+            if administrador_oleadas.en_descanso:
+                if len(grupo_barco_sistema) == 0:
+                    nuevo_navio = BarcoInvasor(nivel_activo)
+                    grupo_barco_sistema.add(nuevo_navio)
+                    print("[ RELOJ PATRIO ] ¡Comienza el descanso! El navío español inicia su aproximación náutica.")
+
+            # Mantiene el barco moviéndose cuadro a cuadro por el agua
+            grupo_barco_sistema.update()
 
             # ========================================================
             # ENVOLTORIO DEL MODO DESARROLLADOR (PAUSA DEBUG)
@@ -726,14 +742,20 @@ def main():
                     pygame.draw.rect(surf_indicador, (255, 255, 255, 80), (0, 0, parcela.width, parcela.height), border_radius=4)
                     pantalla.blit(surf_indicador, (parcela.x, parcela.y))
 
-            # Capa Entidades: Dibujamos la base y los sprites de combate sobre el mapa
+            # Capa Entidades: Dibujamos la base y los sprites de combate sobre el mapa (ORDENADO CAPA POR CAPA)
             pantalla.blit(cabildo.image, cabildo.rect)
             grupo_torres.draw(pantalla)
             grupo_proyectiles.draw(pantalla)
             grupo_aliados_moviles.draw(pantalla)
             grupo_ingenieros.draw(pantalla)
+            
+            # 1. Dibujamos primero la infantería enemiga real en la calle de tierra...
             grupo_enemigos.draw(pantalla)
             grupo_textos_flotantes.draw(pantalla) 
+            
+            # 2. Y al dibujar el barco ACÁ abajo, sus maderas y velas van a tapar de forma 
+            # impecable a cualquier soldado que ande merodeando o naciendo en la zona trasera del muelle.
+            grupo_barco_sistema.draw(pantalla)
 
             # Capa Interfaz: El HUD va arriba de todo para que no lo tapen los personajes
             interfaz_grafica.draw_hud(pantalla, dinero_patria, administrador_oleadas.oleada_actual, cabildo, administrador_oleadas, tiempo_actual, pos_barra_vida_activa)
