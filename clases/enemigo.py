@@ -109,9 +109,17 @@ class Enemigo(pygame.sprite.Sprite):
         self.reducir_opacidad = False   
         self.tiempo_ultimo_golpe = 0
         
-        # --- VARIABLES PARA EL EFECTO FADE-OUT (DESVANECIMIENTO) ---
-        self.opacidad_muerte = 255     # Arranca en 255 (totalmente opaco)
-        self.reducir_opacidad = False   # Se activa recién cuando llega al último cuadro tirado
+        # === VARIABLES PARA EL EFECTO FADE-IN DE NACIMIENTO ===
+        self.opacidad_nacimiento = 0      # Arranca 100% invisible en el muelle/inicio
+        self.fade_in_completo = False     # Bandera de control
+        
+        # === EL CANAL INVISIBLE DE FÁBRICA ===
+        # Clonamos el cuadro inicial y le inyectamos opacidad 0 para que no parpadee al aparecer
+        copia_nacimiento = self.image.copy()
+        superficie_alfa_init = pygame.Surface(copia_nacimiento.get_size(), pygame.SRCALPHA)
+        superficie_alfa_init.fill((255, 255, 255, self.opacidad_nacimiento))
+        copia_nacimiento.blit(superficie_alfa_init, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        self.image = copia_nacimiento
 
         # === CANDADO ACÚSTICO DE CAÍDA ===
         self.ya_sonoc_caida = False # Evita el spam infinito del mp3 en el frame fijo
@@ -164,7 +172,7 @@ class Enemigo(pygame.sprite.Sprite):
             self.ultimo_refresco = tiempo_actual
 
         # ========================================================
-        # CANDADO DE SEGURIDAD CONTRA INDEXERROR (NUEVO)
+        # CANDADO DE SEGURIDAD CONTRA INDEXERROR 
         # ========================================================
         # Si el frame actual quedó desfasado por un cambio de calle o de tropa, lo reiniciamos a 0 para evitar que desborde el tamaño de la lista activa
         if self.frame_actual >= len(self.animacion_actual):
@@ -178,15 +186,26 @@ class Enemigo(pygame.sprite.Sprite):
             self.image = cuadro_base.copy()
 
         # ========================================================
-        # AJUSTE DE OFFSETS VISUALES PARA EL ARTILLERO (NUEVO)
+        # LÓGICA DE FADE-IN EN CALIENTE
         # ========================================================
-        # Si el personaje activo es el artillero pesado y está caminando hacia arriba
+        if self.opacidad_nacimiento < 255:
+            # Va sumando opacidad de forma limpia en cada ciclo
+            self.opacidad_nacimiento += 12
+            if self.opacidad_nacimiento >= 255:
+                self.opacidad_nacimiento = 255
+                self.fade_in_completo = True # Habilita tu barra de salud flotante
+            
+            # Aplicamos la multiplicación alfa de forma dinámica sobre el frame activo
+            superficie_alfa_in = pygame.Surface(self.image.get_size(), pygame.SRCALPHA)
+            superficie_alfa_in.fill((255, 255, 255, self.opacidad_nacimiento))
+            self.image.blit(superficie_alfa_in, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+
+        # ========================================================
+        # AJUSTE DE OFFSETS VISUALES PARA EL ARTILLERO 
+        # ========================================================
         if self.tipo == "artillero" and self.animacion_actual == self.anim_arriba:
-            # Desplazamos su rectángulo invisible 12 píxeles hacia la izquierda en pantalla.
-            # (Si notás que todavía le falta un poquito, subí este número a 16 o 18 a ojo)
             self.rect.centerx = int(self.pos_x) - 12
         else:
-            # En cualquier otra animación o soldado, se respeta la posición flotante matemática exacta
             self.rect.centerx = int(self.pos_x)
             
         self.rect.centery = int(self.pos_y)
@@ -197,6 +216,39 @@ class Enemigo(pygame.sprite.Sprite):
             superficie_tinte.fill((255, 0, 0, 130))
             self.image.blit(superficie_tinte, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
+        # ========================================================
+        # MOTOR DE BARRA DE SALUD FLOTANTE PARA ENEMIGOS 
+        # ========================================================
+        if not self.esta_muerto and self.fade_in_completo:
+            ancho_total_barra = 26
+            alto_barra = 4
+            
+            vida_maxima_unidad = 40 if self.tipo == "artillero" else 15
+            porcentaje_salud = max(0.0, min(1.0, self.vida / vida_maxima_unidad))
+            ancho_verde_actual = int(ancho_total_barra * porcentaje_salud)
+            
+            if porcentaje_salud > 0.5:
+                color_dinamico = (int(510 * (1 - porcentaje_salud)), 235, 20)
+            else:
+                color_dinamico = (255, int(510 * porcentaje_salud), 20)
+            
+            ancho_orig, alto_orig = self.image.get_size()
+            lienzo_expandido = pygame.Surface((ancho_orig, alto_orig + 10), pygame.SRCALPHA)
+            
+            # Estampamos el cuerpo 10 píxeles abajo para hacer el colchón de aire
+            lienzo_expandido.blit(self.image, (0, 10))
+            
+            bx = (ancho_orig // 2) - (ancho_total_barra // 2)
+            by = 2 
+            
+            pygame.draw.rect(lienzo_expandido, (10, 10, 20), (bx - 1, by - 1, ancho_total_barra + 2, alto_barra + 2))
+            if ancho_verde_actual > 0:
+                pygame.draw.rect(lienzo_expandido, color_dinamico, (bx, by, ancho_verde_actual, alto_barra))
+                
+            self.image = lienzo_expandido
+            
+            # Compensamos el contenedor en el eje Y para que pise la calle empedrada
+            self.rect.centery = int(self.pos_y) - 10
 
     def recibir_danio(self, cantidad, grupo_enemigos, administrador_sonidos=None):
         """Aplica impacto, activa el flash de danio y gestiona la caida."""
@@ -225,52 +277,47 @@ class Enemigo(pygame.sprite.Sprite):
             self.ultimo_refresco = pygame.time.get_ticks()
 
     def actualizar_animacion_muerte(self):
-        """Muestra los 6 cuadros cayendo al piso y gatilla el audio en el frame exacto."""
+        """Muestra los 6 cuadros cayendo al piso en sintonía con el eje expandido."""
         tiempo_actual = pygame.time.get_ticks()
         
-        # 1. Avanzamos en la lista hasta llegar al ultimo cuadro (Tu lógica intacta)
         if not self.reducir_opacidad:
             if tiempo_actual - self.ultimo_refresco > self.velocidad_animacion:
                 if self.frame_actual < len(self.anim_muerte) - 1:
                     self.frame_actual += 1
                     self.ultimo_refresco = tiempo_actual
                     
-                    # === DETECTOR DEL IMPACTO CONTRA EL SUELO (REPARADO AL 100%) ===
-                    # Evaluamos si el frame es el 3 (el 4to sprite, justo cuando tocan el suelo)
                     if self.frame_actual == 3 and not self.ya_sonoc_caida:
-                        self.ya_sonoc_caida = True # Cerramos el candado contra el spam
-                        
-                        # TRUCO INDUSTRIAL DE LECTURA DIRECTA EN MEMORIA:
-                        # Inspeccionamos las variables del sistema para morder al administrador_sonidos original 
-                        # del main() sin importar si la bala mandó un None o no. ¡Es indestructible!
+                        self.ya_sonoc_caida = True 
                         import inspect
                         for frame_info in inspect.stack():
-                            # Buscamos en los hilos del main el objeto del mánager de audio
                             if "administrador_sonidos" in frame_info.frame.f_locals:
                                 snd_manager = frame_info.frame.f_locals["administrador_sonidos"]
                                 if snd_manager is not None:
-                                    snd_manager.play_caida() # ¡Hace tronar tu pack de caida1 a 5.mp3!
+                                    snd_manager.play_caida()
                                 break
                 else:
                     self.reducir_opacidad = True
 
-        # 2. Forzamos a que mantenga la orientacion (Tu lógica original de abajo sigue igual...)
         cuadro_caida = self.anim_muerte[self.frame_actual]
         if self.espejar_horizontal:
-            self.image = pygame.transform.flip(cuadro_caida, True, False).copy()
+            cuadro_final = pygame.transform.flip(cuadro_caida, True, False).copy()
         else:
-            self.image = cuadro_caida.copy()
+            cuadro_final = cuadro_caida.copy()
 
-        # 3. LOGICA DE DESVANECIMIENTO GRADUAL
+        # === COMPENSACIÓN DE LA TRANSICIÓN DE MUERTE ===
+        # Aplicamos el mismo colchón de 10 píxeles a la caída para que enganche perfecto con la caminata
+        ancho_orig, alto_orig = cuadro_final.get_size()
+        lienzo_muerte_expandido = pygame.Surface((ancho_orig, alto_orig + 10), pygame.SRCALPHA)
+        lienzo_muerte_expandido.blit(cuadro_final, (0, 10))
+        self.image = lienzo_muerte_expandido
+        self.rect.centery = int(self.pos_y) - 10
+
         if self.reducir_opacidad:
-            # Le restamos 5 puntos de opacidad en cada frame (A mayor numero, mas rapido desaparece)
             self.opacidad_muerte -= 5
-            
             if self.opacidad_muerte <= 0:
                 self.opacidad_muerte = 0
-                self.kill() # RECIÉN ACÁ se elimina definitivamente el sprite del juego
+                self.kill() 
             else:
-                # El truco: Creamos una capa transparente y la multiplicamos para atenuar el cuerpo
                 superficie_alfa = pygame.Surface(self.image.get_size(), pygame.SRCALPHA)
                 superficie_alfa.fill((255, 255, 255, self.opacidad_muerte))
                 self.image.blit(superficie_alfa, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)

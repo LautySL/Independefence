@@ -48,14 +48,19 @@ class UIManager:
         # ========================================================
         if wave_manager.en_descanso:
             tiempo_restante = max(0, (wave_manager.duracion_descanso - (tiempo_actual - wave_manager.tiempo_inicio_descanso)) // 1000)
-            msg_alerta = f"LOS ESPANOLES ATACAN EN: {tiempo_restante}s"
             
-            # Renderizamos la capa negra de fondo y la de frente amarilla
+            # === CAMBIO INTERACTIVO DE TEXTO (NUEVO) ===
+            # Si el marcador llegó a cero exacto, mutamos el mensaje colonial
+            if tiempo_restante == 0:
+                msg_alerta = "¡NUEVA HORDA!"
+            else:
+                msg_alerta = f"LOS ESPANOLES ATACAN EN: {tiempo_restante}s"
+            
+            # Renderizamos la capa negra de fondo y la de frente amarilla (Tu lógica original intacta)
             surf_borde = self.fuente_hud.render(msg_alerta, True, (0, 0, 0))
             surf_frente = self.fuente_hud.render(msg_alerta, True, (255, 215, 0))
             rect_alerta = surf_frente.get_rect(center=(512, 42))
             
-            # Dibujamos el contorno en cruz de 2 pixeles para blindar la lectura
             for dx, dy in [(-2,0), (2,0), (0,-2), (0,2), (-2,-2), (2,-2), (-2,2), (2,2)]:
                 pantalla.blit(surf_borde, (rect_alerta.x + dx, rect_alerta.y + dy))
             pantalla.blit(surf_frente, rect_alerta)

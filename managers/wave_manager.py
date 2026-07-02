@@ -73,8 +73,24 @@ class WaveManager:
         if self.enemigos_pendientes:
             if tiempo_actual - self.ultimo_spawn > self.frecuencia_spawn:
                 tipo_proximo = self.enemigos_pendientes.pop(0)
-                nuevo_soldado = Enemigo(camino=self.camino, tipo=tipo_proximo)
+                
+                # === SENSOR DE BIFURCACIONES INDUSTRIAL (REPARADO) ===
+                # Evaluamos si la variable 'self.camino' tiene elementos y si el primer casillero 
+                # es otra lista (lo que nos confirma que es la matriz de caminos del Nivel 2)
+                if self.camino and isinstance(self.camino[0], list):
+                    import random
+                    # Sorteamos de forma legítima una de las dos rutas individuales de la Catedral
+                    camino_elegido = random.choice(self.camino)
+                else:
+                    # Si es el nivel 1 o una lista lineal de tuplas común, usa la ruta rígida de siempre
+                    camino_elegido = self.camino
+                
+                # Instanciamos el enemigo pasándole la ruta sorteada limpia de una sola dimensión
+                nuevo_soldado = Enemigo(camino=camino_elegido, tipo=tipo_proximo)
                 grupo_enemigos.add(nuevo_soldado)
+                
+                import random
+                self.frecuencia_spawn = random.randint(600, 2600)
                 self.ultimo_spawn = tiempo_actual
         else:
             # === DETECTOR DE FIN DE OLEADA BLINDADO (CORREGIDO) ===

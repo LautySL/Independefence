@@ -114,6 +114,26 @@ class SoundManager:
         except Exception as e:
             print(f"Aviso: No se pudo cargar el pack de caídas: {e}")
 
+        # 11. AUDIO DE IMPACTO INICIAL DE LAS HORDAS POR ESCENARIO (NUEVO)
+        self.snd_campana_cabildo = None
+        self.snds_catedral = []
+
+        try:
+            self.snd_campana_cabildo = pygame.mixer.Sound("assets/sonidos/campana.mp3")
+            self.snd_campana_cabildo.set_volume(0.6) # Sonido fuerte e imponente
+        except Exception as e:
+            print(f"Aviso: No se pudo cargar assets/sonidos/campana.mp3: {e}")
+
+        try:
+            # Cargamos tus dos pistas alternativas para la Catedral metropolitana
+            self.snds_catedral = [
+                pygame.mixer.Sound("assets/sonidos/catedral1.mp3"),
+                pygame.mixer.Sound("assets/sonidos/catedral2.mp3")
+            ]
+            for snd in self.snds_catedral: snd.set_volume(0.6)
+        except Exception as e:
+            print(f"Aviso: No se pudo cargar el pack de audios de catedral: {e}")
+
     # ========================================================
     # CONTROLADORES DE VOLUMEN DINÁMICOS EN CALIENTE (NUEVO)
     # ========================================================
@@ -142,6 +162,10 @@ class SoundManager:
             if snd: snd.set_volume(self.vol_fx)
         for snd in self.snds_caida:
             if snd: snd.set_volume(self.vol_fx * 0.5)
+
+        if self.snd_campana_cabildo: self.snd_campana_cabildo.set_volume(self.vol_fx * 1.2)
+        for snd in self.snds_catedral:
+            if snd: snd.set_volume(self.vol_fx * 1.2)
 
     # ========================================================
     # MÉTODOS DE REPRODUCCIÓN (TUS LÍNEAS NATIVAS ACTUALES)
@@ -239,3 +263,13 @@ class SoundManager:
             canal_libre = pygame.mixer.find_channel(True)
             if canal_libre:
                 canal_libre.play(sonido_elegido)
+
+    def play_campana_cabildo(self):
+        """Gatilla las campanas tradicionales en el segundo cero del Cabildo."""
+        if self.snd_campana_cabildo:
+            self.snd_campana_cabildo.play()
+
+    def play_alerta_catedral(self):
+        """Elige al azar uno de tus dos mp3 de catedral para el segundo cero."""
+        if self.snds_catedral:
+            random.choice(self.snds_catedral).play()

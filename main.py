@@ -675,12 +675,11 @@ def main():
                 tiempo_restante_ms = tiempo_limite - tiempo_actual
                 
                 segundos_restantes = max(0, int(tiempo_restante_ms / 1000))
-                
                 # Candado de un solo pulso: evaluamos si cambió el segundo físico en este frame
                 if segundos_restantes != segundo_alerta_anterior:
                     segundo_alerta_anterior = segundos_restantes # Seteamos el nuevo registro
                     
-                    # Rango A: Alerta Regular de preparación (De 8 a 4 segundos inclusive)
+                    # Rango A: Alerta Regular de preparación (De 10 a 4 segundos inclusive)
                     if 3 < segundos_restantes <= 10:
                         administrador_sonidos.play_countdown()
                         print(f"[ RELOJ PATRIO ] Quedan {segundos_restantes}s... ¡Preparen la defensa!")
@@ -689,8 +688,17 @@ def main():
                     elif 0 < segundos_restantes <= 3:
                         administrador_sonidos.play_lowcountdown()
                         print(f"[ RELOJ PATRIO ] Quedan {segundos_restantes}s... ¡Realistas a la vista!")
-                    elif segundos_restantes <= 0:
-                        print(f"[ RELOJ PATRIO ] ¡Realistas entran al ataque!")
+                        
+                    # === RANGO C: IMPACTO CRÍTICO SEGUNDO CERO (NUEVO GATILLO) ===
+                    elif segundos_restantes == 0:
+                        if nivel_activo == 1:
+                            # Hacemos sonar campana.mp3 en el Cabildo de Buenos Aires
+                            administrador_sonidos.play_campana_cabildo()
+                        elif nivel_activo == 2:
+                            # Hacemos sonar al azar catedral1 o catedral2.mp3 en la Catedral
+                            administrador_sonidos.play_alerta_catedral()
+                            
+                        print("[ RELOJ PATRIO ] ¡CERO SEGUNDOS! ¡Las campanas anuncian la invasión!")
             else:
                 # En cuanto los enemigos empiezan a marchar por el mapa, limpiamos el casillero para la próxima horda
                 segundo_alerta_anterior = -1
