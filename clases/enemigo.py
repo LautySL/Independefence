@@ -287,14 +287,25 @@ class Enemigo(pygame.sprite.Sprite):
                     self.ultimo_refresco = tiempo_actual
                     
                     if self.frame_actual == 3 and not self.ya_sonoc_caida:
-                        self.ya_sonoc_caida = True 
+                        self.ya_sonoc_caida = True # Cerramos el candado contra el spam
+                        
+                        # Inspeccionamos las variables del sistema para morder al administrador_sonidos del main()
                         import inspect
                         for frame_info in inspect.stack():
                             if "administrador_sonidos" in frame_info.frame.f_locals:
                                 snd_manager = frame_info.frame.f_locals["administrador_sonidos"]
                                 if snd_manager is not None:
+                                    # 1. Suena obligatoriamente tu ruido físico de caida1 a 5.mp3 original (Lo que ya andaba)
                                     snd_manager.play_caida()
-                                break
+                                    
+                                    # === 2. INYECCIÓN DINÁMICA DE AUDIO DE ARMAMENTO (NUEVO) ===
+                                    # Evaluamos el rol de la entidad para ver qué fierro se le cae de las manos
+                                    if self.tipo == "artillero":
+                                        # Si muere un artillero, suena una de tus escopetas largas al azar
+                                        snd_manager.play_escopeta_tirada()
+                                    else:
+                                        # Si muere un soldado raso común, suena un sable desenvainado cayendo en las piedras
+                                        snd_manager.play_espada_tirada()
                 else:
                     self.reducir_opacidad = True
 

@@ -134,6 +134,24 @@ class SoundManager:
         except Exception as e:
             print(f"Aviso: No se pudo cargar el pack de audios de catedral: {e}")
 
+        # 12. PACKS ACÚSTICOS DE ARMAMENTO AL CAER (NUEVO)
+        self.snds_espada = []
+        self.snds_escopeta = []
+
+        try:
+            # Cargamos secuencialmente espadatirada1 al 3
+            self.snds_espada = [pygame.mixer.Sound(f"assets/sonidos/espadatirada{i}.mp3") for i in range(1, 4)]
+            for snd in self.snds_espada: snd.set_volume(self.vol_fx * 0.5)
+        except Exception as e:
+            print(f"Aviso: No se pudo cargar el pack de espadas tiradas: {e}")
+
+        try:
+            # Cargamos secuencialmente escopetatirada1 al 4
+            self.snds_escopeta = [pygame.mixer.Sound(f"assets/sonidos/escopetatirada{i}.mp3") for i in range(1, 5)]
+            for snd in self.snds_escopeta: snd.set_volume(self.vol_fx * 0.5)
+        except Exception as e:
+            print(f"Aviso: No se pudo cargar el pack de escopetas tiradas: {e}")
+
     # ========================================================
     # CONTROLADORES DE VOLUMEN DINÁMICOS EN CALIENTE (NUEVO)
     # ========================================================
@@ -161,6 +179,10 @@ class SoundManager:
         for snd in self.snds_volver:
             if snd: snd.set_volume(self.vol_fx)
         for snd in self.snds_caida:
+            if snd: snd.set_volume(self.vol_fx * 0.5)
+        for snd in self.snds_espada:
+            if snd: snd.set_volume(self.vol_fx * 0.5)
+        for snd in self.snds_escopeta:
             if snd: snd.set_volume(self.vol_fx * 0.5)
 
         if self.snd_campana_cabildo: self.snd_campana_cabildo.set_volume(self.vol_fx * 1.2)
@@ -273,3 +295,17 @@ class SoundManager:
         """Elige al azar uno de tus dos mp3 de catedral para el segundo cero."""
         if self.snds_catedral:
             random.choice(self.snds_catedral).play()
+
+    def play_espada_tirada(self):
+        """Dispara un audio aleatorio del pack de sables chocando el piso."""
+        if self.snds_espada:
+            sonido = random.choice(self.snds_espada)
+            canal = pygame.mixer.find_channel(True)
+            if canal: canal.play(sonido)
+
+    def play_escopeta_tirada(self):
+        """Dispara un audio aleatorio del pack de mosquetes pesados chocando el piso."""
+        if self.snds_escopeta:
+            sonido = random.choice(self.snds_escopeta)
+            canal = pygame.mixer.find_channel(True)
+            if canal: canal.play(sonido)
