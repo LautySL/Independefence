@@ -5,19 +5,16 @@ class WaveManager:
     def __init__(self, camino):
         self.camino = camino
         self.oleada_actual = 1
-        
-        # Lista de enemigos pendientes por salir en la oleada activa
         self.enemigos_pendientes = []
-        
-        # Tiempos de control en milisegundos
+
+        # === CANDADO DE CAMPAÑA PATRIOTICA (NUEVO) ===
+        self.juego_terminado = False # Si pasa a True, el mánager se congela y no procesa más nada
+
         self.ultimo_spawn = 0
-        self.frecuencia_spawn = 2000  # Tiempo entre soldados (2 segundos)
-        
+        self.frecuencia_spawn = 2000  
         self.en_descanso = True
         self.tiempo_inicio_descanso = pygame.time.get_ticks()
-        self.duracion_descanso = 10000  # 10 segundos para construir torres antes de la horda
-        
-        # Cargar la configuracion automatica del primer nivel
+        self.duracion_descanso = 10000  
         self.preparar_oleada()
 
     def preparar_oleada(self):
@@ -61,7 +58,11 @@ class WaveManager:
 
     def update(self, tiempo_actual, grupo_enemigos, cabildo=None):
         """Monitorea el reloj global para instanciar los sprites en la ruta de campaña."""
-        # 1. Modo Descanso: El jugador recolecta o planea sus defensas
+        # CANDADO INDUSTRIAL DE FRONTERA: Si la campaña ya fue ganada, apagamos el mánager por completo
+        if self.juego_terminado:
+            return
+
+        # 1. Modo Descanso
         if self.en_descanso:
             if tiempo_actual - self.tiempo_inicio_descanso > self.duracion_descanso:
                 self.en_descanso = False
@@ -72,51 +73,41 @@ class WaveManager:
         if self.enemigos_pendientes:
             if tiempo_actual - self.ultimo_spawn > self.frecuencia_spawn:
                 tipo_proximo = self.enemigos_pendientes.pop(0)
-                
-                # === MECÁNICA DE BIFURCACIÓN ALEATORIA (NUEVO) ===
-                # Evaluamos si pasamos una matriz de caminos múltiples (Lista de listas)
-                if isinstance(self.camino[0], list):
-                    import random
-                    # El soldado elige de forma independiente una de las dos rutas del muelle
-                    camino_elegido = random.choice(self.camino)
-                else:
-                    # Si jugás el nivel 1 común, usa el vector rígido único del Cabildo
-                    camino_elegido = self.camino
-                
-                # Instanciamos el enemigo pasándole la ruta sorteada al azar
-                nuevo_soldado = Enemigo(camino=camino_elegido, tipo=tipo_proximo)
+                nuevo_soldado = Enemigo(camino=self.camino, tipo=tipo_proximo)
                 grupo_enemigos.add(nuevo_soldado)
-                
-                import random
-                self.frecuencia_spawn = random.randint(600, 2600)
                 self.ultimo_spawn = tiempo_actual
         else:
-            # === DETECTOR DE FIN DE OLEADA BLINDADO INDUSTRIAL (CORREGIDO) ===
-            # El juego SOLO avanza de horda o da la victoria si la pantalla está vacía (len == 0)
-            # Y ADEMÁS la lista de espera de la ticketera militar está totalmente vacía de forma legal.
+            # === DETECTOR DE FIN DE OLEADA BLINDADO (CORREGIDO) ===
             if len(grupo_enemigos) == 0 and not self.enemigos_pendientes:
                 
-                # --- REPORTES EN CONSOLA SEGÚN EL DESEMPEÑO DEL GDD (Lo que ya tenías) ---
-                if cabildo:
-                    vidas_max = getattr(cabildo, "vidas_maximas", 20)
-                    if cabildo.vidas < vidas_max:
+                # --- EL CERROJO DEFINITIVO DE LA CAMPAÑA (REPARADO) ---
+                if self.oleada_actual == 3:
+                    if cabildo:
+                        vidas_max = getattr(cabildo, "vidas_maximas", 20)
+                        print(f"¡DEFENSA PERFECTA REVOLUCIONARIA! Completaste la horda {self.oleada_actual}.")
+                        print(f"Resistencia del Cabildo final: {cabildo.vidas}/{vidas_max}")
+                        
+                    print("\n¡VICTORIA REVOLUCIONARIA DEFINITIVA! Derrotaste la campana del Cabildo.")
+                    
+                    # Activamos los candados y clavamos las variables de forma estática
+                    self.juego_terminado = True 
+                    self.oleada_actual = 4 
+                    self.enemigos_pendientes = []
+                    return # <-- ¡EL FRENO CLAVE! Salimos del método inmediatamente para no tocar el else de abajo
+                    
+                else:
+                    # --- REPORTES DE HORDAS INTERMEDIAS (1 Y 2) ---
+                    if cabildo:
+                        vidas_max = getattr(cabildo, "vidas_maximas", 20)
                         print(f"¡ALERTA! Completaste la horda {self.oleada_actual} pero sufriendo bajas.")
                         print(f"Resistencia del Cabildo actual: {cabildo.vidas}/{vidas_max}")
                     else:
-                        print(f"¡DEFENSA PERFECTA! Victoria absoluta en la horda {self.oleada_actual}.")
-                else:
-                    print(f"¡Horda {self.oleada_actual} completada con éxito!")
-
-                # --- EL CERROJO DEFINITIVO DE LA CAMPAÑA ---
-                if self.oleada_actual == 3:
-                    print("¡VICTORIA REVOLUCIONARIA DEFINITIVA! Derrotaste la campana del Cabildo.")
-                    self.oleada_actual = 4 
-                    self.enemigos_pendientes = []
-                else:
+                        print(f"¡Horda {self.oleada_actual} completada con éxito!")
+                        
                     print(f"Preparando oleada numero: {self.oleada_actual + 1}")
                     self.oleada_actual += 1
                     
-                    # Llamamos a tu método dinámico de carga para preparar la siguiente ronda
+                    # Llamamos a tu método dinámico de la ruleta para armar la siguiente tanda
                     self.preparar_oleada()
                     
                     self.en_descanso = True
