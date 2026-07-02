@@ -629,7 +629,7 @@ def main():
 
                 # 3. ACTUALIZACIÓN DE ENTIDADES CONTINUA 
                 grupo_enemigos.update()
-                grupo_torres.update(grupo_enemigos, grupo_proyectiles, tiempo_actual)  
+                grupo_torres.update(grupo_enemigos, grupo_proyectiles, tiempo_actual, administrador_sonidos)  
                 grupo_proyectiles.update(grupo_enemigos)
                 grupo_aliados_moviles.update(grupo_enemigos, tiempo_actual)
                 grupo_ingenieros.update(grupo_enemigos)

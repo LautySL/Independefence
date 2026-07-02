@@ -63,7 +63,7 @@ class Torre(pygame.sprite.Sprite):
             self.cadencia = int(self.cadencia * 0.8)  # Dispara más rápido
             self.dibujar_marcador_temporal()
 
-    def update(self, grupo_enemigos, grupo_proyectiles, tiempo_actual):
+    def update(self, grupo_enemigos, grupo_proyectiles, tiempo_actual, administrador_sonidos=None):
         """Busca un objetivo valido en rango y abre fuego segun su cadencia."""
         for enemigo in grupo_enemigos:
             if enemigo.esta_muerto:
@@ -74,10 +74,9 @@ class Torre(pygame.sprite.Sprite):
             distancia = math.hypot(dx, dy)
             
             if distancia <= self.rango:
-                # CORRECCIÓN DE ORDEN: Pasamos exactamente enemigo, grupo y tiempo
-                self.atacar(enemigo, grupo_proyectiles, tiempo_actual)
+                # CORRECCIÓN DEFINITIVA: Le pasamos 'administrador_sonidos' al método atacar
+                self.atacar(enemigo, grupo_proyectiles, tiempo_actual, administrador_sonidos)
                 break 
-
 
     def buscar_objetivo(self, grupo_enemigos):
         """Calcula mediante Pitágoras el enemigo más cercano dentro del radio."""
@@ -97,14 +96,19 @@ class Torre(pygame.sprite.Sprite):
                     
         return enemigo_cercano
 
-    def atacar(self, enemigo_objetivo, grupo_proyectiles, tiempo_actual):
+    def atacar(self, enemigo_objetivo, grupo_proyectiles, tiempo_actual, administrador_sonidos):
         """Instancia un nuevo proyectil dirigido al soldado realista respetando la recarga."""
         if tiempo_actual - self.ultima_cadencia > self.cadencia:
-            # CORRECCIÓN DEFINITIVA: Agrupamos las coordenadas entre parentesis ( ) 
-            # para formar la tupla exacta que tu proyectil espera recibir en 'pos_origen'
+            # Formamos la tupla exacta que tu proyectil espera recibir en 'pos_origen'
             nuevo_proyectil = Proyectil((self.rect.centerx, self.rect.centery), enemigo_objetivo, self.danio)
             
             # Agregamos la municion al grupo de sprites activo
             grupo_proyectiles.add(nuevo_proyectil)
             
             self.ultima_cadencia = tiempo_actual
+
+            # === INYECCIÓN ACÚSTICA CALIBRADA (ADENTRO DEL DISPARO) ===
+            # Metemos el sonido adentro del if de la recarga para que suene ÚNICAMENTE cuando sale una bala real.
+            # Validamos que 'administrador_sonidos' haya llegado bien y que la unidad sea el Gaucho.
+            if self.tipo == "gauchos" and administrador_sonidos is not None:
+                administrador_sonidos.play_disparo()

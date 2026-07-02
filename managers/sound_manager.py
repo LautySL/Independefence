@@ -96,6 +96,14 @@ class SoundManager:
         except Exception as e:
             print(f"Aviso: No se pudo cargar assets/sonidos/lowcountdown.mp3: {e}")
 
+        # 9. CARGA AISLADA DEL EFECTO DE DISPARO DE TORRES (NUEVO)
+        self.snd_disparo = None
+        try:
+            self.snd_disparo = pygame.mixer.Sound("assets/sonidos/disparo.mp3")
+            self.snd_disparo.set_volume(0.4) # Volumen prudente para que no sature si hay muchos gauchos
+        except Exception as e:
+            print(f"Aviso: No se pudo cargar assets/sonidos/disparo.mp3: {e}")
+
     # ========================================================
     # CONTROLADORES DE VOLUMEN DINÁMICOS EN CALIENTE (NUEVO)
     # ========================================================
@@ -114,6 +122,8 @@ class SoundManager:
         if self.snd_gear: self.snd_gear.set_volume(self.vol_fx)
         if self.snd_victoria: self.snd_victoria.set_volume(self.vol_fx)
         if self.snd_gameover: self.snd_gameover.set_volume(self.vol_fx)
+        if self.snd_gameover: self.snd_gameover.set_volume(self.vol_fx)
+        if self.snd_disparo: self.snd_disparo.set_volume(self.vol_fx)
         
         # SINCRO DE LISTAS: Recorremos los efectos aleatorios de forma legal contra el spam
         for snd in self.snds_siguiente:
@@ -199,3 +209,8 @@ class SoundManager:
         """Gatilla la alerta crítica de horda inminente (De 3 a 0 segundos)."""
         if self.snd_lowcountdown:
             self.snd_lowcountdown.play()
+
+    def play_disparo(self):
+        """Gatilla el sonido de mosquete cuando una torre aliada abre fuego."""
+        if self.snd_disparo:
+            self.snd_disparo.play()
