@@ -116,7 +116,8 @@ def main():
     # Buscá estas líneas arriba de tu while correr en el main():
     control_hover = {"activo": -1}
     ultimo_sonido_hover = 0 # Inicializado en 0 como número común y corriente
-    tiempo_gear_hundido = 0 
+    tiempo_gear_hundido = 0
+    segundo_alerta_anterior = -1
 
     arrastrando_musica = False
     arrastrando_fx = False
@@ -631,6 +632,37 @@ def main():
                 # Dejamos que corra libre su render en pantalla sin interferir con su caminata
                 elif getattr(enemigo, "esta_muerto", False):
                     pass
+
+            # ========================================================
+            # ORQUESTADOR DE CUENTA REGRESIVA DE OLEADAS 
+            # ========================================================
+            # Validamos si el manager de hordas está en tiempo de descanso/espera antes de mandar soldados
+            if hasattr(administrador_oleadas, "en_descanso") and administrador_oleadas.en_descanso:
+                
+                # REPARACIÓN MATEMÁTICA REAL: Sumamos el inicio + la duración y le restamos el tiempo actual
+                tiempo_limite = administrador_oleadas.tiempo_inicio_descanso + administrador_oleadas.duracion_descanso
+                tiempo_restante_ms = tiempo_limite - tiempo_actual
+                
+                segundos_restantes = max(0, int(tiempo_restante_ms / 1000))
+                
+                # Candado de un solo pulso: evaluamos si cambió el segundo físico en este frame
+                if segundos_restantes != segundo_alerta_anterior:
+                    segundo_alerta_anterior = segundos_restantes # Seteamos el nuevo registro
+                    
+                    # Rango A: Alerta Regular de preparación (De 8 a 4 segundos inclusive)
+                    if 3 < segundos_restantes <= 10:
+                        administrador_sonidos.play_countdown()
+                        print(f"[ RELOJ PATRIO ] Quedan {segundos_restantes}s... ¡Preparen la defensa!")
+                        
+                    # Rango B: Alerta Crítica de invasión inminente (De 3 a 1 segundos inclusive)
+                    elif 0 < segundos_restantes <= 3:
+                        administrador_sonidos.play_lowcountdown()
+                        print(f"[ RELOJ PATRIO ] ¡EMERGENCIA! Quedan {segundos_restantes}s... ¡Realistas a la vista!")
+                    elif segundos_restantes <= 0:
+                        print(f"[ RELOJ PATRIO ] ¡Realistas entran al ataque!")
+            else:
+                # En cuanto los enemigos empiezan a marchar por el mapa, limpiamos el casillero para la próxima horda
+                segundo_alerta_anterior = -1
 
             # 5. EL MÁNAGER DE OLEADAS GESTIONA LAS HORDAS DE FORMA SEGURA
             administrador_oleadas.update(tiempo_actual, grupo_enemigos, cabildo)

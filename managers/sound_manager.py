@@ -80,6 +80,22 @@ class SoundManager:
         except Exception as e:
             print(f"Aviso: No se pudo cargar assets/sonidos/gear.mp3: {e}")
 
+        # 8. CUENTA REGRESIVA
+        self.snd_countdown = None
+        self.snd_lowcountdown = None
+
+        try:
+            self.snd_countdown = pygame.mixer.Sound("assets/sonidos/countdown.mp3")
+            self.snd_countdown.set_volume(0.6) # Volumen prudente
+        except Exception as e:
+            print(f"Aviso: No se pudo cargar assets/sonidos/countdown.mp3: {e}")
+
+        try:
+            self.snd_lowcountdown = pygame.mixer.Sound("assets/sonidos/lowcountdown.mp3")
+            self.snd_lowcountdown.set_volume(0.7) # Un POCO más fuerte por la urgencia
+        except Exception as e:
+            print(f"Aviso: No se pudo cargar assets/sonidos/lowcountdown.mp3: {e}")
+
     # ========================================================
     # CONTROLADORES DE VOLUMEN DINÁMICOS EN CALIENTE (NUEVO)
     # ========================================================
@@ -99,6 +115,7 @@ class SoundManager:
         if self.snd_victoria: self.snd_victoria.set_volume(self.vol_fx)
         if self.snd_gameover: self.snd_gameover.set_volume(self.vol_fx)
         
+        # SINCRO DE LISTAS: Recorremos los efectos aleatorios de forma legal contra el spam
         for snd in self.snds_siguiente:
             if snd: snd.set_volume(self.vol_fx)
         for snd in self.snds_volver:
@@ -172,3 +189,13 @@ class SoundManager:
         """Gatilla el sonido mecánico al presionar el engranaje de opciones."""
         if self.snd_gear:
             self.snd_gear.play()
+
+    def play_countdown(self):
+        """Gatilla la alerta regular de preparación (De 8 a 3 segundos)."""
+        if self.snd_countdown:
+            self.snd_countdown.play()
+
+    def play_lowcountdown(self):
+        """Gatilla la alerta crítica de horda inminente (De 3 a 0 segundos)."""
+        if self.snd_lowcountdown:
+            self.snd_lowcountdown.play()
