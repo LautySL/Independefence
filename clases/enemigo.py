@@ -113,6 +113,8 @@ class Enemigo(pygame.sprite.Sprite):
         self.opacidad_muerte = 255     # Arranca en 255 (totalmente opaco)
         self.reducir_opacidad = False   # Se activa recién cuando llega al último cuadro tirado
 
+        # === CANDADO ACÚSTICO DE CAÍDA ===
+        self.ya_sonoc_caida = False # Evita el spam infinito del mp3 en el frame fijo
 
     def update(self):
         """Maneja el movimiento, decide la animacion y procesa el tinte de impacto."""
@@ -196,14 +198,12 @@ class Enemigo(pygame.sprite.Sprite):
             self.image.blit(superficie_tinte, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
 
-    def recibir_danio(self, cantidad, grupo_enemigos):
+    def recibir_danio(self, cantidad, grupo_enemigos, administrador_sonidos=None):
         """Aplica impacto, activa el flash de danio y gestiona la caida."""
         if self.esta_muerto:
             return
             
         self.vida -= cantidad
-        
-        # --- ACTIVAMOS EL FLASH DE DAÑO ---
         # Guardamos el fotograma exacto en el que sufrio el golpe para pintar el tinte rojo
         self.tiempo_ultimo_golpe = pygame.time.get_ticks()
         
@@ -212,7 +212,10 @@ class Enemigo(pygame.sprite.Sprite):
             self.frame_actual = 0
             self.animacion_actual = self.anim_muerte
             
-            # CORRECCIÓN: El cuadro de muerte inicial hereda la orientacion que traia el soldado en la calle
+            # === GUARDAMOS EL MÁNAGER EN LA ENTIDAD (NUEVO) ===
+            # Almacenamos el canal de sonido en la memoria del objeto soldado
+            self.sound_manager_ref = administrador_sonidos
+            
             cuadro_base = self.animacion_actual[self.frame_actual]
             if self.espejar_horizontal:
                 self.image = pygame.transform.flip(cuadro_base, True, False)
@@ -222,20 +225,36 @@ class Enemigo(pygame.sprite.Sprite):
             self.ultimo_refresco = pygame.time.get_ticks()
 
     def actualizar_animacion_muerte(self):
-        """Muestra los 6 cuadros cayendo al piso y congela el ultimo fotograma para desvanecerlo."""
+        """Muestra los 6 cuadros cayendo al piso y gatilla el audio en el frame exacto."""
         tiempo_actual = pygame.time.get_ticks()
         
-        # 1. Avanzamos en la lista hasta llegar al ultimo cuadro
+        # 1. Avanzamos en la lista hasta llegar al ultimo cuadro (Tu lógica intacta)
         if not self.reducir_opacidad:
             if tiempo_actual - self.ultimo_refresco > self.velocidad_animacion:
                 if self.frame_actual < len(self.anim_muerte) - 1:
                     self.frame_actual += 1
                     self.ultimo_refresco = tiempo_actual
+                    
+                    # === DETECTOR DEL IMPACTO CONTRA EL SUELO (REPARADO AL 100%) ===
+                    # Evaluamos si el frame es el 3 (el 4to sprite, justo cuando tocan el suelo)
+                    if self.frame_actual == 3 and not self.ya_sonoc_caida:
+                        self.ya_sonoc_caida = True # Cerramos el candado contra el spam
+                        
+                        # TRUCO INDUSTRIAL DE LECTURA DIRECTA EN MEMORIA:
+                        # Inspeccionamos las variables del sistema para morder al administrador_sonidos original 
+                        # del main() sin importar si la bala mandó un None o no. ¡Es indestructible!
+                        import inspect
+                        for frame_info in inspect.stack():
+                            # Buscamos en los hilos del main el objeto del mánager de audio
+                            if "administrador_sonidos" in frame_info.frame.f_locals:
+                                snd_manager = frame_info.frame.f_locals["administrador_sonidos"]
+                                if snd_manager is not None:
+                                    snd_manager.play_caida() # ¡Hace tronar tu pack de caida1 a 5.mp3!
+                                break
                 else:
-                    # LLEGÓ AL ÚLTIMO CUADRO: Activamos el cerrojo para empezar a desvanecer
                     self.reducir_opacidad = True
 
-        # 2. Forzamos a que mantenga la orientacion que traia en la calle
+        # 2. Forzamos a que mantenga la orientacion (Tu lógica original de abajo sigue igual...)
         cuadro_caida = self.anim_muerte[self.frame_actual]
         if self.espejar_horizontal:
             self.image = pygame.transform.flip(cuadro_caida, True, False).copy()

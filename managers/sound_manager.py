@@ -104,6 +104,16 @@ class SoundManager:
         except Exception as e:
             print(f"Aviso: No se pudo cargar assets/sonidos/disparo.mp3: {e}")
 
+        # 10. PACK ALEATORIO DE CAÍDA DE ENEMIGOS (NUEVO)
+        self.snds_caida = []
+        try:
+            # Cargamos secuencialmente los 5 archivos caida1.mp3 al 5
+            self.snds_caida = [pygame.mixer.Sound(f"assets/sonidos/caida{i}.mp3") for i in range(1, 6)]
+            # Ajustamos un volumen sutil para que el golpe contra el suelo no opaque los disparos
+            for snd in self.snds_caida: snd.set_volume(self.vol_fx * 0.5)
+        except Exception as e:
+            print(f"Aviso: No se pudo cargar el pack de caídas: {e}")
+
     # ========================================================
     # CONTROLADORES DE VOLUMEN DINÁMICOS EN CALIENTE (NUEVO)
     # ========================================================
@@ -130,6 +140,8 @@ class SoundManager:
             if snd: snd.set_volume(self.vol_fx)
         for snd in self.snds_volver:
             if snd: snd.set_volume(self.vol_fx)
+        for snd in self.snds_caida:
+            if snd: snd.set_volume(self.vol_fx * 0.5)
 
     # ========================================================
     # MÉTODOS DE REPRODUCCIÓN (TUS LÍNEAS NATIVAS ACTUALES)
@@ -214,3 +226,16 @@ class SoundManager:
         """Gatilla el sonido de mosquete cuando una torre aliada abre fuego."""
         if self.snd_disparo:
             self.snd_disparo.play()
+
+    def play_caida(self):
+        """Dispara un audio de impacto aleatorio forzando un canal libre en el mixer."""
+        if self.snds_caida:
+            # Elegimos uno de tus 5 mp3 de caídas al azar
+            sonido_elegido = random.choice(self.snds_caida)
+            
+            # TRUCO INDUSTRIAL: Usamos play(loops=0, maxtime=0, fade_ms=0) o buscamos un canal disponible.
+            # En Pygame, llamar a pygame.mixer.find_channel(True) busca un canal libre en la RAM 
+            # y, si están todos ocupados, corta el sonido más viejo (el disparo viejo) para hacer sonar la caída.
+            canal_libre = pygame.mixer.find_channel(True)
+            if canal_libre:
+                canal_libre.play(sonido_elegido)

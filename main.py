@@ -652,6 +652,10 @@ def main():
                         dinero_patria += enemigo.recompensa
                         enemigo.ya_pago_recompensa = True
                         
+                        # === REPARACIÓN DE PASE DE PARÁMETROS ===
+                        # Llamamos a tu método nativo pasándole tu 'administrador_sonidos' global del main()
+                        enemigo.recibir_danio(0, grupo_enemigos, administrador_sonidos)
+                        
                         enemigo.esta_muerto = True
                         enemigo.frame_actual = 0
                         enemigo.ultimo_refresco = pygame.time.get_ticks()
